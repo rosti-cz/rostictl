@@ -1,0 +1,28 @@
+# This is just a test file
+# Unique application name, don't change it
+name: clitest
+# Enabling https
+https: true
+# List of domains configured on the load balancer for this application
+domains:
+- testcli.rostiapp.cz
+# Type of the application, it can be python,php,node.js,ruby,golang,deno. This is required.
+type: python
+# Directory with the source code that will be uploaded onto server into /srv/app. Default is .
+source: .
+# Plan of the service, possible values are: static,start,start+,normal,normal+,pro,pro+,business,business+. Default is start.
+plan: start
+# Image of the application, Default is the latest.
+runtime: rosti/runtime:2020-10
+# List of background processes running in supervisor
+processes:
+- /srv/venv/bin/gunicorn
+# Crontab jobs
+crontabs:
+- "*/15 * * * * date > /tmp/crontest.txt"
+
+# List of after and before deploy commands. The default values are below
+before_commands:
+- supervisorctl stop app
+after_commands:
+- supervisorctl start app
