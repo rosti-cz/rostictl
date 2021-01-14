@@ -3,12 +3,14 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/rosti-cz/cli/src/config"
 	"github.com/rosti-cz/cli/src/parser"
 	"github.com/rosti-cz/cli/src/rostiapi"
+	"github.com/rosti-cz/cli/src/ssh"
 	"github.com/rosti-cz/cli/src/state"
 	"github.com/urfave/cli/v2"
 )
@@ -138,6 +140,7 @@ func commandUP(c *cli.Context) error {
 	// TODO: yes, here
 
 	// Create or update the application
+	var newApp *rostiapi.App
 	if appState.ApplicationID > 0 {
 		// Check existence of the app
 		apps, err := client.GetApps()
@@ -167,7 +170,12 @@ func commandUP(c *cli.Context) error {
 			Plan:   planID,
 		}
 
-		_, err = client.UpdateApp(&app)
+		// TODO: save assigned domains into Rostifile
+
+		newApp, err = client.UpdateApp(&app)
+		if err != nil {
+			return err
+		}
 	} else {
 		// Create a new app
 		fmt.Printf(".. creating a new application %s \n", rostifile.Name)
@@ -180,7 +188,7 @@ func commandUP(c *cli.Context) error {
 			Plan:   planID,
 		}
 
-		newApp, err := client.CreateApp(&app)
+		newApp, err = client.CreateApp(&app)
 		if err != nil {
 			return err
 		}
@@ -188,10 +196,53 @@ func commandUP(c *cli.Context) error {
 	}
 
 	// Deploy files
+	fmt.Println(".. creating an archive")
+	err = createArchive(rostifile.Source, "/tmp/_archive.tar") // TODO: create a proper temporary file here
+	if err != nil {
+		return err
+	}
+
+	if len(newApp.SSHAccess) == 0 {
+		return errors.New("no SSH access found")
+	}
+
+	sshClient := ssh.Client{
+		Server:     newApp.SSHAccess[0].Hostname,
+		Port:       int(newApp.SSHAccess[0].Port),
+		Username:   newApp.SSHAccess[0].Username,
+		SSHKeyPath: "/home/cx/.ssh/id_rsa", // TODO: we need code to find or generate this
+	}
+
+	fmt.Println(".. copying the archive into the container")
+	archive, err := os.Open("/tmp/_archive.tar")
+	if err != nil {
+		return err
+	}
+	defer archive.Close()
+
+	err = sshClient.StreamFile("/srv/_archive.tar", archive)
+	if err != nil {
+		return err
+	}
+
+	// TODO: mkdir -p /srv/app
+	// TODO: before commands
+	// TODO: after commands
+	// TODO: rm -rf /srv/app/* or something like that
+	// TODO: mv _archive.tar /srv/app/ && cd /srv/app && tar xf _archive.tar
+	// TODO: maybe let use to set a strategy?
+	// TODO: let user to exclude files and directory
+
+	fmt.Println(".. unarchiving the code in the container")
+	_, err = sshClient.Run("/bin/sh -c \"mkdir -p /srv/app && mv _archive.tar /srv/app/ && cd /srv/app && tar xf _archive.tar\"")
+	if err != nil {
+		return err
+	}
 
 	// Aftedeploy commands
 
 	fmt.Println("All done!")
+	// TODO: print status of the application that tells user details about the app
 
 	return nil
 }

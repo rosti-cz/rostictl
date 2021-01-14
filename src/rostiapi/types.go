@@ -13,7 +13,7 @@ type App struct {
 	Date         string      `json:"date"`
 	Name         string      `json:"name"`
 	Enabled      bool        `json:"enabled"`
-	Image        string      `json:"image"`
+	Image        string      `json:"image_tag"`
 	Domain       []string    `json:"domains"`
 	Mode         string      `json:"mode"`
 	Plan         uint        `json:"plan"`
