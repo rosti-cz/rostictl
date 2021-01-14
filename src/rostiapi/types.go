@@ -13,11 +13,12 @@ type App struct {
 	Date         string      `json:"date"`
 	Name         string      `json:"name"`
 	Enabled      bool        `json:"enabled"`
-	Image        string      `json:"image_tag"`
+	Image        string      `json:"image"`
 	Domain       []string    `json:"domains"`
 	Mode         string      `json:"mode"`
 	Plan         uint        `json:"plan"`
 	SSHAccess    []SSHAccess `json:"ssh_access"`
+	SSHKeys      []string    `json:"ssh_keys,omitempty"`
 	SMTPUsername string      `json:"smtp_username"`
 	SMTPToken    string      `json:"smtp_token"`
 }

@@ -20,9 +20,10 @@ processes:
 # Crontab jobs
 crontabs:
 - "*/15 * * * * date > /tmp/crontest.txt"
-
 # List of after and before deploy commands. The default values are below
 before_commands:
 - supervisorctl stop app
 after_commands:
 - supervisorctl start app
+exclude:
+- .git

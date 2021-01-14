@@ -23,4 +23,6 @@ type Rostifile struct {
 	BeforeCommands []string `yaml:"before_commands"`
 	// Commands to run after deploy ends. Default: supervisorctl start app
 	AfterCommands []string `yaml:"after_commands"`
+	// What directories and files to exclude from the deploy
+	Exclude []string `yaml:"exclude"`
 }

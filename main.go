@@ -40,27 +40,19 @@ func main() {
 						Usage:   "Company ID",
 					},
 				},
-				Action: commandUP,
+				Action: commandUp,
 			},
 			{
 				Name:    "down",
 				Aliases: []string{},
 				Usage:   "Turns the application off but doesn't remove it.",
-				Action: func(c *cli.Context) error {
-					fmt.Println("")
-
-					return nil
-				},
+				Action:  commandDown,
 			},
 			{
 				Name:    "rm",
 				Aliases: []string{},
 				Usage:   "Removes the application.",
-				Action: func(c *cli.Context) error {
-					fmt.Println("")
-
-					return nil
-				},
+				Action:  commandRemove,
 			},
 			{
 				Name:    "status",

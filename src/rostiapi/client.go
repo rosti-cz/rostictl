@@ -21,7 +21,7 @@ type Client struct {
 }
 
 func (c *Client) getTimeout() time.Duration {
-	timeout := 10
+	timeout := 60
 	if c.Timeout != 0 {
 		timeout = c.Timeout
 	}
@@ -174,6 +174,7 @@ func (c *Client) DoApp(id uint, action string) error {
 
 	body, statusCode, err := c.call("PUT", strconv.Itoa(int(c.CompanyID))+"/"+"apps-action/"+strconv.Itoa(int(id))+"/", body)
 	if statusCode != 200 {
+		fmt.Println(statusCode)
 		responseError := ErrorResponse{}
 		err = json.Unmarshal(body, &responseError)
 		if err != nil {
