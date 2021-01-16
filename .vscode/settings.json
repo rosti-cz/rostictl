@@ -1,5 +1,7 @@
 {
     "cSpell.words": [
-        "rostifile"
+        "rostictl",
+        "rostifile",
+        "supervisorctl"
     ]
 }

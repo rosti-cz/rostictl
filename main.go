@@ -73,10 +73,15 @@ func main() {
 			{
 				Name:    "runtimes",
 				Aliases: []string{},
-				Usage:   "Prints list of available runtimes you can use in Rostifile.",
+				Usage:   "Prints list of available runtimes you can use in Rostifile",
 				Action:  commandRuntimes,
 			},
-			// init (generates a Rostifile)
+			{
+				Name:    "init",
+				Aliases: []string{},
+				Usage:   "Creates a new Rostifile in the current working directory",
+				Action:  commandInit,
+			},
 			// backup
 		},
 	}

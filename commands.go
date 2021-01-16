@@ -92,6 +92,7 @@ func commandUp(c *cli.Context) error {
 
 	// Create or update the application
 	var newApp *rostiapi.App
+	var appCreated bool
 	// Update existing app
 	if appState.ApplicationID > 0 {
 		fmt.Println(".. loading current state of the application")
@@ -156,15 +157,11 @@ func commandUp(c *cli.Context) error {
 			return err
 		}
 		appState.ApplicationID = newApp.ID
+
+		appCreated = true
 	}
 
-	// Deploy files
-	fmt.Println(".. creating an archive")
-	err = createArchive(rostifile.Source, "/tmp/_archive.tar") // TODO: create a proper temporary file here
-	if err != nil {
-		return err
-	}
-
+	// SSH client initialization
 	if len(newApp.SSHAccess) == 0 {
 		return errors.New("no SSH access found")
 	}
@@ -174,6 +171,26 @@ func commandUp(c *cli.Context) error {
 		Port:       int(newApp.SSHAccess[0].Port),
 		Username:   newApp.SSHAccess[0].Username,
 		SSHKeyPath: privateSSHKeyPath,
+	}
+	// TODO: wait until the client is ready
+
+	// Setup technology
+	if appCreated {
+		fmt.Println(".. settings up " + rostifile.Technology + " environment")
+		cmd := "rosti " + rostifile.Technology
+		buf, err := sshClient.Run(cmd)
+		if err != nil {
+			fmt.Println("Command '" + cmd + "' error:")
+			fmt.Println(buf.String())
+			return err
+		}
+	}
+
+	// Deploy files
+	fmt.Println(".. creating an archive")
+	err = createArchive(rostifile.Source, "/tmp/_archive.tar", rostifile.Exclude) // TODO: create a proper temporary file here
+	if err != nil {
+		return err
 	}
 
 	// TODO: Check if the SSH connect is successful and if not, wait a little bit
@@ -221,8 +238,57 @@ func commandUp(c *cli.Context) error {
 		}
 	}
 
+	// Setup crontab
+	if len(rostifile.Crontabs) > 0 {
+		fmt.Println(".. setting up crontabs")
+		err = sshClient.SendFile("/srv/conf/crontab", strings.Join(rostifile.Crontabs, "\n")+"\n")
+		if err != nil {
+			return fmt.Errorf("uploading crontabs error: %w", err)
+		}
+		_, err = sshClient.Run("crontab /srv/conf/crontab")
+		if err != nil {
+			return fmt.Errorf("refreshing crontab error: %w", err)
+		}
+	}
+
+	// Setup background processes
+	if len(rostifile.Processes) > 0 {
+		fmt.Println(".. setting up supervisor processes")
+		var processes []string
+		for _, process := range rostifile.Processes {
+			processes = append(processes, `[program:`+process.Name+`]
+command=`+process.Command+`
+autostart=true
+autorestart=true
+process_name=`+process.Name+`
+stdout_logfile=/srv/log/`+process.Name+`.log
+stdout_logfile_maxbytes=2MB
+stdout_logfile_backups=5
+stdout_capture_maxbytes=2MB
+stdout_events_enabled=false
+redirect_stderr=true
+`)
+		}
+
+		err = sshClient.SendFile("/srv/conf/supervisor.d/rostictl.conf", "# This file is gonna be rewritten by rostictl\n\n"+strings.Join(processes, "\n")+"\n")
+		if err != nil {
+			return fmt.Errorf("updating supervisor config error: %w", err)
+		}
+
+		_, err = sshClient.Run("supervisorctl reread")
+		if err != nil {
+			return fmt.Errorf("refreshing supervisor error: %w", err)
+		}
+		_, err = sshClient.Run("supervisorctl update")
+		if err != nil {
+			return fmt.Errorf("updating supervisor error: %w", err)
+		}
+	}
+
+	// Done
 	fmt.Println(".. all done, let's check status of the application")
 
+	// Check app's status
 	fmt.Println(".. loading current application status")
 	status, err := client.GetAppStatus(appState.ApplicationID)
 	if err != nil {
@@ -438,6 +504,18 @@ func commandRuntimes(c *cli.Context) error {
 	for _, runtime := range runtimes {
 		fmt.Printf("  %s\n", runtime.Image)
 	}
+
+	return nil
+}
+
+func commandInit(c *cli.Context) error {
+	_, err := os.Stat("./Rostifile")
+	if !os.IsNotExist(err) {
+		fmt.Println("Rostifile already exists in this directory")
+		os.Exit(1)
+	}
+
+	parser.Init()
 
 	return nil
 }

@@ -68,8 +68,8 @@ func (c *Client) client() (*ssh.Client, error) {
 	return client, err
 }
 
-// sendFile uploads a content into a remote path.
-func (c *Client) sendFile(server string, path string, content string) error {
+// SendFile uploads a content into a remote path.
+func (c *Client) SendFile(path string, content string) error {
 	client, err := c.client()
 	if err != nil {
 		return err

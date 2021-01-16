@@ -19,7 +19,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func createArchive(source, target string) error {
+func createArchive(source, target string, exclude []string) error {
 	tarfile, err := os.Create(target)
 	if err != nil {
 		return err
@@ -41,6 +41,14 @@ func createArchive(source, target string) error {
 
 	return filepath.Walk(source,
 		func(path string, info os.FileInfo, err error) error {
+			for _, excludedItem := range exclude {
+				if info.IsDir() && info.Name() == excludedItem {
+					return filepath.SkipDir
+				} else if info.Name() == excludedItem {
+					return nil
+				}
+			}
+
 			if err != nil {
 				return err
 			}
@@ -262,7 +270,7 @@ func printAppStatus(domains []string, status rostiapi.AppStatus, app rostiapi.Ap
 		}
 	}
 
-	if len(status.Errors) > 0 {
+	if len(status.Info) > 0 {
 		fmt.Println("")
 		fmt.Println("")
 		fmt.Println("Info messages:")

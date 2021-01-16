@@ -1,7 +1,9 @@
 package parser
 
 import (
+	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -12,6 +14,7 @@ const rostiFilePath = "./Rostifile"
 // Parse returns parsed Rostifile
 func Parse() (*Rostifile, error) {
 	rostifile := Rostifile{}
+	rostifile.Validate()
 
 	body, err := ioutil.ReadFile(rostiFilePath)
 	if err != nil {
@@ -24,4 +27,35 @@ func Parse() (*Rostifile, error) {
 	}
 
 	return &rostifile, nil
+}
+
+// Init create a new Rostifile in the current working directory
+func Init() error {
+	rostifile := Rostifile{}
+
+	fmt.Print("Name of the project: ")
+	fmt.Scanln(&rostifile.Name)
+
+	validationErrors := rostifile.Validate()
+	if len(validationErrors) > 0 {
+		fmt.Println("The input is not valid:")
+		for _, err := range validationErrors {
+			fmt.Println("  " + err.Error())
+		}
+		os.Exit(2)
+	}
+
+	body, err := yaml.Marshal(rostifile)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(rostiFilePath, body, 0644)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(".. a new Rostifile has been created.")
+
+	return nil
 }
