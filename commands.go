@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"strconv"
+	"strings"
 
 	"github.com/rosti-cz/cli/src/config"
 	"github.com/rosti-cz/cli/src/parser"
@@ -28,11 +30,15 @@ func commandUp(c *cli.Context) error {
 
 	privateSSHKeyPath, _, err := findSSHKey()
 	if err != nil {
-		fmt.Println("Your SSH keys cannot be located.")
-		fmt.Println("Please put your public and private RSA or ED25519 keys into:")
-		fmt.Println(" ", path.Join(user.HomeDir, ".ssh", "id_X"))
-		fmt.Println(" ", path.Join(user.HomeDir, ".ssh", "id_X.pub"))
-		fmt.Println("and try again.")
+		fmt.Println("Your SSH key cannot be located.")
+		fmt.Println("Please put your public and private RSA key (only type supported) into:")
+		fmt.Println(" ", path.Join(user.HomeDir, ".ssh", "id_rsa"))
+		fmt.Println(" ", path.Join(user.HomeDir, ".ssh", "id_rsa.pub"))
+		fmt.Println("and try again. You generate a new key with these commands:")
+		fmt.Println("")
+		fmt.Println("  mkdir -p ~/.ssh")
+		fmt.Println("  ssh-keygen -t rsa -f ~/.ssh/id_rsa")
+		fmt.Println("")
 		return fmt.Errorf("SSH key problem: %w", err)
 	}
 
@@ -115,7 +121,7 @@ func commandUp(c *cli.Context) error {
 			ID:      appState.ApplicationID,
 			Name:    rostifile.Name,
 			Image:   selectedRuntime,
-			Domain:  rostifile.Domains,
+			Domains: rostifile.Domains,
 			Mode:    mode,
 			Plan:    planID,
 			SSHKeys: []string{sshPubKey},
@@ -139,7 +145,7 @@ func commandUp(c *cli.Context) error {
 		app := rostiapi.App{
 			Name:    rostifile.Name,
 			Image:   selectedRuntime,
-			Domain:  rostifile.Domains,
+			Domains: rostifile.Domains,
 			Mode:    mode,
 			Plan:    planID,
 			SSHKeys: []string{sshPubKey},
@@ -184,11 +190,10 @@ func commandUp(c *cli.Context) error {
 		return err
 	}
 
-	fmt.Println(".. unarchiving code in the container")
-
 	var buf *bytes.Buffer
 
 	for _, cmd := range rostifile.BeforeCommands {
+		fmt.Printf(".. running command: %s\n", cmd)
 		buf, err = sshClient.Run(cmd)
 		if err != nil {
 			fmt.Println("Command '" + cmd + "' error:")
@@ -197,6 +202,7 @@ func commandUp(c *cli.Context) error {
 		}
 	}
 
+	fmt.Println(".. unarchiving code in the container")
 	cmd := "/bin/sh -c \"mkdir -p /srv/app && mv _archive.tar /srv/app/ && cd /srv/app && tar xf _archive.tar\""
 	buf, err = sshClient.Run(cmd)
 	if err != nil {
@@ -206,6 +212,7 @@ func commandUp(c *cli.Context) error {
 	}
 
 	for _, cmd := range rostifile.AfterCommands {
+		fmt.Printf(".. running command: %s\n", cmd)
 		buf, err = sshClient.Run(cmd)
 		if err != nil {
 			fmt.Println("Command '" + cmd + "' error:")
@@ -214,8 +221,25 @@ func commandUp(c *cli.Context) error {
 		}
 	}
 
-	fmt.Println("All done!")
-	// TODO: print status of the application that tells user details about the app
+	fmt.Println(".. all done, let's check status of the application")
+
+	fmt.Println(".. loading current application status")
+	status, err := client.GetAppStatus(appState.ApplicationID)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(".. loading current application configuration")
+	app, err := client.GetApp(appState.ApplicationID)
+
+	fmt.Println("")
+	printAppStatus(app.Domains, status, app)
+
+	fmt.Println("")
+	fmt.Println("Note: This output doesn't have to be precise, because container")
+	fmt.Println("hasn't had to boot up fully or DNS hasn't propagated into the world.")
+	fmt.Println("Run `rostictl status` to run these checks again later to find out what's")
+	fmt.Println("the status of this application.")
 
 	return nil
 }
@@ -247,7 +271,39 @@ func commandDown(c *cli.Context) error {
 		return err
 	}
 
-	fmt.Println("All done!")
+	fmt.Println(".. all done!")
+
+	return nil
+}
+
+func commandStart(c *cli.Context) error {
+	config := config.Load()
+
+	fmt.Println(".. loading state file")
+	appState, err := state.Load()
+	if err != nil {
+		return err
+	}
+	defer state.Write(appState)
+
+	client := rostiapi.Client{
+		Token:     config.Token,
+		CompanyID: appState.CompanyID,
+	}
+
+	fmt.Println(".. loading Rostifile")
+	rostifile, err := parser.Parse()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf(".. starting application %s_%d\n", rostifile.Name, appState.ApplicationID)
+	err = client.DoApp(appState.ApplicationID, "start")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(".. all done")
 
 	return nil
 }
@@ -286,7 +342,102 @@ func commandRemove(c *cli.Context) error {
 		return err
 	}
 
-	fmt.Println("All done!")
+	fmt.Println(".. all done!")
+
+	return nil
+}
+
+func commandStatus(c *cli.Context) error {
+	config := config.Load()
+
+	fmt.Println(".. loading state file")
+	appState, err := state.Load()
+	if err != nil {
+		return err
+	}
+	defer state.Write(appState)
+
+	client := rostiapi.Client{
+		Token:     config.Token,
+		CompanyID: appState.CompanyID,
+	}
+
+	fmt.Println(".. loading application status")
+	status, err := client.GetAppStatus(appState.ApplicationID)
+	if err != nil {
+		return err
+	}
+
+	app, err := client.GetApp(appState.ApplicationID)
+	domains := app.Domains
+
+	fmt.Println()
+	printAppStatus(domains, status, app)
+
+	return nil
+}
+
+func commandPlans(c *cli.Context) error {
+	config := config.Load()
+
+	client := rostiapi.Client{
+		Token: config.Token,
+	}
+
+	plans, err := client.GetPlans()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("  %12s  Plan\n", "Slug")
+	fmt.Printf("  %12s  ------------\n", "------------")
+	for _, plan := range plans {
+		fmt.Printf("  %12s  %s\n", strings.ToLower(plan.Name), plan.Name)
+	}
+	fmt.Println("")
+	fmt.Println("Note: Use slug in your Rostifile.")
+
+	return nil
+}
+
+func commandCompanies(c *cli.Context) error {
+	config := config.Load()
+
+	client := rostiapi.Client{
+		Token: config.Token,
+	}
+
+	companies, err := client.GetCompanies()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("  %6s  Company name\n", "ID")
+	fmt.Printf("  %6s  ------------\n", "------")
+	for _, company := range companies {
+		fmt.Printf("  %6s  %s\n", strconv.Itoa(int(company.ID)), company.Name)
+	}
+
+	return nil
+}
+
+func commandRuntimes(c *cli.Context) error {
+	config := config.Load()
+
+	client := rostiapi.Client{
+		Token: config.Token,
+	}
+
+	runtimes, err := client.GetRuntimes()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("  Runtime\n")
+	fmt.Printf("  ---------------------------\n")
+	for _, runtime := range runtimes {
+		fmt.Printf("  %s\n", runtime.Image)
+	}
 
 	return nil
 }

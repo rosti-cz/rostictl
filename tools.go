@@ -212,3 +212,64 @@ func selectRuntime(client *rostiapi.Client, rostifile *parser.Rostifile) (string
 
 	return selectedRuntime, nil
 }
+
+func printAppStatus(domains []string, status rostiapi.AppStatus, app rostiapi.App) {
+	fmt.Println("The application is available on these domains:")
+	fmt.Println("")
+	for _, domain := range domains {
+		fmt.Println("   * http://" + domain)
+	}
+	if len(app.SSHAccess) > 0 {
+		fmt.Println("")
+		fmt.Println("")
+		fmt.Println("SSH access:")
+		fmt.Println("")
+		fmt.Printf("  SSH command: ssh -p %d %s@%s\n", app.SSHAccess[0].Port, app.SSHAccess[0].Username, app.SSHAccess[0].Hostname)
+		fmt.Printf("  SSH URI: ssh://%s@%s:%d\n", app.SSHAccess[0].Username, app.SSHAccess[0].Hostname, app.SSHAccess[0].Port)
+	}
+
+	fmt.Println("")
+	fmt.Println("")
+	fmt.Println("Current status:")
+	fmt.Println("")
+	if status.Running {
+		fmt.Println("  Container: running")
+	} else {
+		fmt.Println("  Container: NOT running")
+	}
+
+	fmt.Printf("    Memory: %.2f / %.2f MB\n", status.Memory.Usage, status.Memory.Limit)
+	fmt.Printf("    Storage: %.2f / %.2f GB (over limit: %.2f GB)\n", status.Storage.Usage, status.Storage.Limit, status.Storage.OverLimit)
+
+	if status.DNSStatus {
+		fmt.Println("  DNS: all good")
+	} else {
+		fmt.Println("  DNS: records are not set properly or they haven't been propagated to the internet yet")
+	}
+
+	if status.HTTPStatus {
+		fmt.Println("  HTTP: all good")
+	} else {
+		fmt.Println("  HTTP: application doesn't return 200-like status code")
+	}
+
+	if len(status.Errors) > 0 {
+		fmt.Println("")
+		fmt.Println("")
+		fmt.Println("Error messages:")
+		for _, message := range status.Errors {
+			fmt.Println("  * " + message)
+		}
+	}
+
+	if len(status.Errors) > 0 {
+		fmt.Println("")
+		fmt.Println("")
+		fmt.Println("Info messages:")
+		fmt.Println("")
+		for _, message := range status.Info {
+			fmt.Println("  * " + message)
+		}
+	}
+	fmt.Println("")
+}

@@ -14,7 +14,7 @@ type App struct {
 	Name         string      `json:"name"`
 	Enabled      bool        `json:"enabled"`
 	Image        string      `json:"image"`
-	Domain       []string    `json:"domains"`
+	Domains      []string    `json:"domains"`
 	Mode         string      `json:"mode"`
 	Plan         uint        `json:"plan"`
 	SSHAccess    []SSHAccess `json:"ssh_access"`
@@ -53,4 +53,22 @@ type Company struct {
 type Runtime struct {
 	ID    uint   `json:"id"`
 	Image string `json:"image"`
+}
+
+// AppStatus contains status information about one application
+type AppStatus struct {
+	Errors     []string `json:"errors"`
+	Info       []string `json:"info"`
+	DNSStatus  bool     `json:"dns_status"`
+	HTTPStatus bool     `json:"http_status"`
+	Running    bool     `json:"running"`
+	Storage    struct {
+		Usage     float64 `json:"usage"`
+		Limit     float64 `json:"limit"`
+		OverLimit float64 `json:"over_limit"`
+	} `json:"storage"`
+	Memory struct {
+		Usage float64 `json:"usage"`
+		Limit float64 `json:"limit"`
+	} `json:"memory"`
 }

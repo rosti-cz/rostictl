@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -19,19 +18,12 @@ func main() {
 		Name:      "Rosti.cz CLI",
 		Usage:     "CLI application to manage projects hosted on Rosti.cz",
 		UsageText: "This command line tool reads Rostifile located in the current work directory and runs different commands with parameters defined in this file.\n\n     rostictl [global options] command [command options] [arguments...]",
-		Flags: []cli.Flag{
-			&cli.IntFlag{
-				Name:    "company",
-				Aliases: []string{"c"},
-				Value:   0,
-				Usage:   "Company ID",
-			},
-		},
+		Flags:     []cli.Flag{},
 		Commands: []*cli.Command{
 			{
 				Name:    "up",
 				Aliases: []string{},
-				Usage:   "Deploys new or existing application.",
+				Usage:   "Deploys new or existing application",
 				Flags: []cli.Flag{
 					&cli.IntFlag{
 						Name:    "company",
@@ -44,29 +36,47 @@ func main() {
 			},
 			{
 				Name:    "down",
-				Aliases: []string{},
-				Usage:   "Turns the application off but doesn't remove it.",
+				Aliases: []string{"stop"},
+				Usage:   "Turns the application off but doesn't remove it",
 				Action:  commandDown,
 			},
 			{
-				Name:    "rm",
+				Name:    "start",
 				Aliases: []string{},
-				Usage:   "Removes the application.",
+				Usage:   "Turns the application on without deploying any code",
+				Action:  commandStart,
+			},
+			{
+				Name:    "remove",
+				Aliases: []string{"rm"},
+				Usage:   "Removes the application",
 				Action:  commandRemove,
 			},
 			{
 				Name:    "status",
 				Aliases: []string{},
-				Usage:   "Returns status of the application.",
-				Action: func(c *cli.Context) error {
-					fmt.Println("")
-
-					return nil
-				},
+				Usage:   "Returns status of the application",
+				Action:  commandStatus,
 			},
-			// plans
-			// companies
-			// runtimes
+			{
+				Name:    "plans",
+				Aliases: []string{},
+				Usage:   "Prints list of available plans you can use in Rostifile",
+				Action:  commandPlans,
+			},
+			{
+				Name:    "companies",
+				Aliases: []string{},
+				Usage:   "Prints list of companies you are member of.",
+				Action:  commandCompanies,
+			},
+			{
+				Name:    "runtimes",
+				Aliases: []string{},
+				Usage:   "Prints list of available runtimes you can use in Rostifile.",
+				Action:  commandRuntimes,
+			},
+			// init (generates a Rostifile)
 			// backup
 		},
 	}

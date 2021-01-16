@@ -249,3 +249,24 @@ func (c *Client) GetRuntimes() ([]Runtime, error) {
 
 	return runtimes, nil
 }
+
+// GetAppStatus returns information about running application
+func (c *Client) GetAppStatus(id uint) (AppStatus, error) {
+	appStatus := AppStatus{}
+
+	body, statusCode, err := c.call("GET", strconv.Itoa(int(c.CompanyID))+"/"+"apps-status/"+strconv.Itoa(int(id))+"/", []byte(""))
+	if err != nil {
+		return appStatus, err
+	}
+
+	if statusCode != 200 {
+		return appStatus, errors.New("non-200 HTTP status code returned")
+	}
+
+	err = json.Unmarshal(body, &appStatus)
+	if err != nil {
+		return appStatus, errors.New("cannot parse response from the server")
+	}
+
+	return appStatus, nil
+}
