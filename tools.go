@@ -200,22 +200,31 @@ func selectRuntime(client *rostiapi.Client, rostifile *parser.Rostifile) (string
 	}
 
 	var selectedRuntime string
-	var lastRuntime string
 
 	if len(runtimes) == 0 {
 		return selectedRuntime, errors.New("no runtime available")
 	}
 
-	for _, runtime := range runtimes {
-		if runtime.Image == rostifile.Runtime {
-			selectedRuntime = rostifile.Runtime
-			break
+	// Find default runtime if there is non available
+	if len(rostifile.Runtime) == 0 {
+		for _, runtime := range runtimes {
+			if runtime.Default {
+				selectedRuntime = runtime.Image
+				break
+			}
 		}
-		lastRuntime = runtime.Image
+	} else {
+		// Check if selected runtime exists
+		for _, runtime := range runtimes {
+			if runtime.Image == rostifile.Runtime {
+				selectedRuntime = rostifile.Runtime
+				break
+			}
+		}
 	}
 
 	if selectedRuntime == "" {
-		selectedRuntime = lastRuntime
+		return selectedRuntime, errors.New("no suitable runtime found, check runtimes command to pick one")
 	}
 
 	return selectedRuntime, nil
@@ -247,7 +256,11 @@ func printAppStatus(domains []string, status rostiapi.AppStatus, app rostiapi.Ap
 	}
 
 	fmt.Printf("    Memory: %.2f / %.2f MB\n", status.Memory.Usage, status.Memory.Limit)
-	fmt.Printf("    Storage: %.2f / %.2f GB (over limit: %.2f GB)\n", status.Storage.Usage, status.Storage.Limit, status.Storage.OverLimit)
+	if status.Storage.Usage >= 0 {
+		fmt.Printf("    Storage: %.2f / %.2f GB (over limit: %.2f GB)\n", status.Storage.Usage, status.Storage.Limit, status.Storage.OverLimit)
+	} else {
+		fmt.Printf("    Storage: - / %.2f GB (over limit: %.2f GB)\n", status.Storage.Limit, status.Storage.OverLimit)
+	}
 
 	if status.DNSStatus {
 		fmt.Println("  DNS: all good")

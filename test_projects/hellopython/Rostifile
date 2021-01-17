@@ -1,0 +1,10 @@
+name: hellopython
+technology: python
+https: false
+source_path: .
+processes:
+- name: app
+  command: /srv/venv/bin/gunicorn -u app -g app -b 0.0.0.0:8080 --access-logfile - --error-logfile - --reload main:app
+after_commands:
+- cd /srv/app && /srv/venv/bin/pip install -r requirements.txt
+- supervisorctl restart app

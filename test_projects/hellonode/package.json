@@ -1,0 +1,10 @@
+{
+    "name": "hellonode",
+    "description": "Node.js test application",
+    "version": "0.1.0",
+    "dependencies": {},
+    "devDependencies": {},
+    "scripts": {
+        "start": "node main.js"
+    }
+  }

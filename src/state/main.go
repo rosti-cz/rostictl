@@ -50,3 +50,8 @@ func Write(state *RostiState) error {
 
 	return nil
 }
+
+// Remove removes state file from the current working directory.
+func Remove() error {
+	return os.Remove(".rosti.state")
+}

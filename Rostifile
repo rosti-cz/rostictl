@@ -10,7 +10,7 @@ https: true
 domains:
 - testcli.rostiapp.cz
 # Directory with the source code that will be uploaded onto server into /srv/app. Default is .
-source: .
+source_path: .
 # Plan of the service, possible values are: static,start,start+,normal,normal+,pro,pro+,business,business+. Default is start.
 plan: start
 # Image of the application, Default is the latest.

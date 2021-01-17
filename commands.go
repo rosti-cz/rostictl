@@ -9,10 +9,12 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rosti-cz/cli/src/config"
 	"github.com/rosti-cz/cli/src/parser"
 	"github.com/rosti-cz/cli/src/rostiapi"
+	"github.com/rosti-cz/cli/src/scanner"
 	"github.com/rosti-cz/cli/src/ssh"
 	"github.com/rosti-cz/cli/src/state"
 	"github.com/urfave/cli/v2"
@@ -174,26 +176,62 @@ func commandUp(c *cli.Context) error {
 	}
 	// TODO: wait until the client is ready
 
+	// Test SSH connection
+	fmt.Println(".. checking if SSH daemon is ready")
+	testCounter := 0
+	for {
+		_, err := sshClient.Run("echo 1")
+		if err == nil {
+			fmt.Println("     ready")
+			break
+		}
+		if testCounter > 12 {
+			return errors.New("SSH daemon has not started in time")
+		}
+
+		testCounter++
+
+		time.Sleep(5 * time.Second)
+	}
+
 	// Setup technology
 	if appCreated {
+		// Call rosti.sh to setup environment for selected technology
 		fmt.Println(".. settings up " + rostifile.Technology + " environment")
-		cmd := "rosti " + rostifile.Technology
+		cmd := "/usr/local/bin/rosti " + rostifile.Technology
 		buf, err := sshClient.Run(cmd)
 		if err != nil {
 			fmt.Println("Command '" + cmd + "' error:")
 			fmt.Println(buf.String())
 			return err
 		}
+
+		// Clean /srv/app and clean /srv/conf/supervisor.d/app.conf because we don't want the default application
+		cmd = "/bin/sh -c 'rm -rf /srv/app/* && rm -rf /srv/conf/supervisor.d/app.conf && supervisorctl reread && supervisorctl update'"
+		buf, err = sshClient.Run(cmd)
+		if err != nil {
+			fmt.Println("Command '" + cmd + "' error:")
+			fmt.Println(buf.String())
+			return err
+		}
+
+		// Initial commands
+		for _, cmd := range rostifile.InitialCommands {
+			buf, err = sshClient.Run(cmd)
+			if err != nil {
+				fmt.Println("Command '" + cmd + "' error:")
+				fmt.Println(buf.String())
+				return err
+			}
+		}
 	}
 
 	// Deploy files
 	fmt.Println(".. creating an archive")
-	err = createArchive(rostifile.Source, "/tmp/_archive.tar", rostifile.Exclude) // TODO: create a proper temporary file here
+	err = createArchive(rostifile.SourcePath, "/tmp/_archive.tar", rostifile.Exclude) // TODO: create a proper temporary file here
 	if err != nil {
 		return err
 	}
-
-	// TODO: Check if the SSH connect is successful and if not, wait a little bit
 
 	fmt.Println(".. copying archive into the container")
 	archive, err := os.Open("/tmp/_archive.tar")
@@ -211,7 +249,7 @@ func commandUp(c *cli.Context) error {
 
 	for _, cmd := range rostifile.BeforeCommands {
 		fmt.Printf(".. running command: %s\n", cmd)
-		buf, err = sshClient.Run(cmd)
+		buf, err = sshClient.Run("/bin/sh -c '" + cmd + "'")
 		if err != nil {
 			fmt.Println("Command '" + cmd + "' error:")
 			fmt.Println(buf.String())
@@ -220,7 +258,7 @@ func commandUp(c *cli.Context) error {
 	}
 
 	fmt.Println(".. unarchiving code in the container")
-	cmd := "/bin/sh -c \"mkdir -p /srv/app && mv _archive.tar /srv/app/ && cd /srv/app && tar xf _archive.tar\""
+	cmd := "/bin/sh -c \"mkdir -p /srv/app && mv _archive.tar /srv/app/ && cd /srv/app && tar xf _archive.tar && rm _archive.tar\""
 	buf, err = sshClient.Run(cmd)
 	if err != nil {
 		fmt.Println("Unarchiving error. Command output:")
@@ -230,7 +268,7 @@ func commandUp(c *cli.Context) error {
 
 	for _, cmd := range rostifile.AfterCommands {
 		fmt.Printf(".. running command: %s\n", cmd)
-		buf, err = sshClient.Run(cmd)
+		buf, err = sshClient.Run("/bin/sh -c '" + cmd + "'")
 		if err != nil {
 			fmt.Println("Command '" + cmd + "' error:")
 			fmt.Println(buf.String())
@@ -256,18 +294,26 @@ func commandUp(c *cli.Context) error {
 		fmt.Println(".. setting up supervisor processes")
 		var processes []string
 		for _, process := range rostifile.Processes {
-			processes = append(processes, `[program:`+process.Name+`]
-command=`+process.Command+`
+			processTemplate := `[program:` + process.Name + `]
+command=` + process.Command + `
+environment=PATH="/srv/bin/primary_tech:/usr/local/bin:/usr/bin:/bin:/srv/.npm-packages/bin"
 autostart=true
 autorestart=true
-process_name=`+process.Name+`
-stdout_logfile=/srv/log/`+process.Name+`.log
+directory=/srv/app
+process_name=` + process.Name + `
+stdout_logfile=/srv/log/` + process.Name + `.log
 stdout_logfile_maxbytes=2MB
 stdout_logfile_backups=5
 stdout_capture_maxbytes=2MB
 stdout_events_enabled=false
 redirect_stderr=true
-`)
+`
+			if process.StopKillAsGroup {
+				processTemplate += "stopasgroup=true\n"
+				processTemplate += "killasgroup=true\n"
+			}
+
+			processes = append(processes, processTemplate)
 		}
 
 		err = sshClient.SendFile("/srv/conf/supervisor.d/rostictl.conf", "# This file is gonna be rewritten by rostictl\n\n"+strings.Join(processes, "\n")+"\n")
@@ -382,7 +428,6 @@ func commandRemove(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	defer state.Write(appState)
 
 	client := rostiapi.Client{
 		Token:     config.Token,
@@ -403,7 +448,7 @@ func commandRemove(c *cli.Context) error {
 
 	fmt.Println(".. removing .rosti.state file")
 
-	err = os.Remove(".rosti.state")
+	err = state.Remove()
 	if err != nil {
 		return err
 	}
@@ -502,7 +547,11 @@ func commandRuntimes(c *cli.Context) error {
 	fmt.Printf("  Runtime\n")
 	fmt.Printf("  ---------------------------\n")
 	for _, runtime := range runtimes {
-		fmt.Printf("  %s\n", runtime.Image)
+		if runtime.Default {
+			fmt.Printf(" *%s\n", runtime.Image)
+		} else {
+			fmt.Printf("  %s\n", runtime.Image)
+		}
 	}
 
 	return nil
@@ -515,7 +564,25 @@ func commandInit(c *cli.Context) error {
 		os.Exit(1)
 	}
 
-	parser.Init()
+	rostifile, err := parser.Init()
+	if err != nil {
+		return err
+	}
+
+	bits, err := scanner.Scan(rostifile.SourcePath)
+	if err != nil {
+		return err
+	}
+
+	rostifile.AfterCommands = bits.AfterCommands
+	rostifile.BeforeCommands = bits.BeforeCommands
+	rostifile.Processes = bits.Processes
+	rostifile.Technology = bits.Technology
+
+	err = parser.Write(rostifile)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

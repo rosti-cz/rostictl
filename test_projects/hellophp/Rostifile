@@ -1,0 +1,10 @@
+name: hellophp
+domains:
+- hellophp.rostiapp.cz
+technology: php
+https: false
+source_path: .
+processes:
+- name: app
+  command: /srv/bin/primary_tech/php-fpm -F -O -g /srv/run/php-fpm.pid -y /srv/conf/php-fpm/php-fpm.conf
+  stop_kill_as_group: false

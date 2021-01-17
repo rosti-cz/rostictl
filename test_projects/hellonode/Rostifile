@@ -1,0 +1,12 @@
+name: hellonode
+domains:
+- hellonode.rostiapp.cz
+technology: node
+https: false
+source_path: .
+processes:
+- name: app
+  command: /srv/bin/primary_tech/npm start
+after_commands:
+- cd /srv/app && npm install
+- supervisorctl restart app
