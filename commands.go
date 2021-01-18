@@ -466,7 +466,6 @@ func commandStatus(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	defer state.Write(appState)
 
 	client := rostiapi.Client{
 		Token:     config.Token,
