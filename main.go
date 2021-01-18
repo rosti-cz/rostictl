@@ -7,6 +7,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const version = "0.1"
+
 func handleError(err error) {
 	log.Fatalln(err)
 }
@@ -81,6 +83,12 @@ func main() {
 				Aliases: []string{},
 				Usage:   "Creates a new Rostifile in the current working directory",
 				Action:  commandInit,
+			},
+			{
+				Name:    "version",
+				Aliases: []string{},
+				Usage:   "Prints version of this binary",
+				Action:  commandVersion,
 			},
 			// backup
 		},

@@ -585,3 +585,8 @@ func commandInit(c *cli.Context) error {
 
 	return nil
 }
+
+func commandVersion(c *cli.Context) error {
+	fmt.Println("Version:", version)
+	return nil
+}

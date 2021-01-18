@@ -2,3 +2,4 @@
 rostictl
 cli
 .rosti.state
+bin/
