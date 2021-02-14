@@ -33,6 +33,10 @@ func main() {
 						Value:   0,
 						Usage:   "Company ID",
 					},
+					&cli.BoolFlag{
+						Name:  "force-init",
+						Usage: "Runs initialization commands even if the application exists.",
+					},
 				},
 				Action: commandUp,
 			},

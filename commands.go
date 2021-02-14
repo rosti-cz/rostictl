@@ -174,7 +174,6 @@ func commandUp(c *cli.Context) error {
 		Username:   newApp.SSHAccess[0].Username,
 		SSHKeyPath: privateSSHKeyPath,
 	}
-	// TODO: wait until the client is ready
 
 	// Test SSH connection
 	fmt.Println(".. checking if SSH daemon is ready")
@@ -197,27 +196,31 @@ func commandUp(c *cli.Context) error {
 	// Setup technology
 	if appCreated {
 		// Call rosti.sh to setup environment for selected technology
-		fmt.Println(".. settings up " + rostifile.Technology + " environment")
-		cmd := "/usr/local/bin/rosti " + rostifile.Technology
-		buf, err := sshClient.Run(cmd)
-		if err != nil {
-			fmt.Println("Command '" + cmd + "' error:")
-			fmt.Println(buf.String())
-			return err
-		}
+		if len(rostifile.Technology) > 0 {
+			fmt.Println(".. settings up " + rostifile.Technology + " environment")
+			cmd := "/usr/local/bin/rosti " + rostifile.Technology
+			buf, err := sshClient.Run(cmd)
+			if err != nil {
+				fmt.Println("Command '" + cmd + "' error:")
+				fmt.Println(buf.String())
+				return err
+			}
 
-		// Clean /srv/app and clean /srv/conf/supervisor.d/app.conf because we don't want the default application
-		cmd = "/bin/sh -c 'rm -rf /srv/app/* && rm -rf /srv/conf/supervisor.d/app.conf && supervisorctl reread && supervisorctl update'"
-		buf, err = sshClient.Run(cmd)
-		if err != nil {
-			fmt.Println("Command '" + cmd + "' error:")
-			fmt.Println(buf.String())
-			return err
-		}
-
-		// Initial commands
-		for _, cmd := range rostifile.InitialCommands {
+			// Clean /srv/app and clean /srv/conf/supervisor.d/app.conf because we don't want the default application
+			cmd = "/bin/sh -c 'rm -rf /srv/app/* && rm -rf /srv/conf/supervisor.d/app.conf && supervisorctl reread && supervisorctl update'"
 			buf, err = sshClient.Run(cmd)
+			if err != nil {
+				fmt.Println("Command '" + cmd + "' error:")
+				fmt.Println(buf.String())
+				return err
+			}
+		}
+	}
+
+	// Initial commands
+	if appCreated || c.Bool("force-init") {
+		for _, cmd := range rostifile.InitialCommands {
+			buf, err := sshClient.Run(cmd)
 			if err != nil {
 				fmt.Println("Command '" + cmd + "' error:")
 				fmt.Println(buf.String())
