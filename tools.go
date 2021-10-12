@@ -172,8 +172,10 @@ func findCompany(client *rostiapi.Client, appState *state.RostiState, c *cli.Con
 
 // Selects plan based on Rostifile or default settings
 func selectPlan(client *rostiapi.Client, rostifile *parser.Rostifile) (uint, error) {
-	// TODO: implements something like default plan loaded from the API (needs support in the API)
-	rostifile.Plan = "start"
+	// TODO: implement something like default plan loaded from the API (needs support in the API)
+	if rostifile.Plan == "" {
+		rostifile.Plan = "start+"
+	}
 
 	fmt.Println(".. loading list of available plans")
 	plans, err := client.GetPlans()

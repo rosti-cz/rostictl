@@ -40,6 +40,8 @@ type Rostifile struct {
 	InitialCommands []string `yaml:"initial_commands,omitempty"`
 	// What directories and files to exclude from the deploy
 	Exclude []string `yaml:"exclude,omitempty"`
+	// Map of files where key is path to the file (including /srv) and value is content of the file
+	Files map[string]string `yaml:"files,omitempty"`
 }
 
 // Validate runs static validation over the structure and sets defaults values when possible.

@@ -25,7 +25,8 @@ type App struct {
 
 // ErrorResponse represents message returned by the API in case of non-200 response
 type ErrorResponse struct {
-	Message string `json:"message"`
+	Message string                 `json:"message"`
+	Errors  map[string]interface{} `json:"errors"`
 	// TODO: add errors: {"message":"validation error","errors":{"domains":["Toto pole nesmí být prázdné (null)."]}}
 }
 

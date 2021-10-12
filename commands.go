@@ -52,7 +52,8 @@ func commandUp(c *cli.Context) error {
 	}
 
 	client := rostiapi.Client{
-		Token: config.Token,
+		Token:      config.Token,
+		ExtraError: os.Stderr,
 	}
 
 	fmt.Println(".. loading state file")
@@ -370,8 +371,9 @@ func commandDown(c *cli.Context) error {
 	defer state.Write(appState)
 
 	client := rostiapi.Client{
-		Token:     config.Token,
-		CompanyID: appState.CompanyID,
+		Token:      config.Token,
+		CompanyID:  appState.CompanyID,
+		ExtraError: os.Stderr,
 	}
 
 	fmt.Println(".. loading Rostifile")
@@ -402,8 +404,9 @@ func commandStart(c *cli.Context) error {
 	defer state.Write(appState)
 
 	client := rostiapi.Client{
-		Token:     config.Token,
-		CompanyID: appState.CompanyID,
+		Token:      config.Token,
+		CompanyID:  appState.CompanyID,
+		ExtraError: os.Stderr,
 	}
 
 	fmt.Println(".. loading Rostifile")
@@ -471,8 +474,9 @@ func commandStatus(c *cli.Context) error {
 	}
 
 	client := rostiapi.Client{
-		Token:     config.Token,
-		CompanyID: appState.CompanyID,
+		Token:      config.Token,
+		CompanyID:  appState.CompanyID,
+		ExtraError: os.Stderr,
 	}
 
 	fmt.Println(".. loading application status")
@@ -494,7 +498,8 @@ func commandPlans(c *cli.Context) error {
 	config := config.Load()
 
 	client := rostiapi.Client{
-		Token: config.Token,
+		Token:      config.Token,
+		ExtraError: os.Stderr,
 	}
 
 	plans, err := client.GetPlans()
@@ -517,7 +522,8 @@ func commandCompanies(c *cli.Context) error {
 	config := config.Load()
 
 	client := rostiapi.Client{
-		Token: config.Token,
+		Token:      config.Token,
+		ExtraError: os.Stderr,
 	}
 
 	companies, err := client.GetCompanies()
@@ -538,7 +544,8 @@ func commandRuntimes(c *cli.Context) error {
 	config := config.Load()
 
 	client := rostiapi.Client{
-		Token: config.Token,
+		Token:      config.Token,
+		ExtraError: os.Stderr,
 	}
 
 	runtimes, err := client.GetRuntimes()
