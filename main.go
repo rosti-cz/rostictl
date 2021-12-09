@@ -89,6 +89,21 @@ func main() {
 				Action:  commandInit,
 			},
 			{
+
+				Name:    "import",
+				Aliases: []string{},
+				Usage:   "Imports existing application into a current working directory (creates .rosti.state, rewrites existing one if there is any)",
+				Action:  commandImport,
+				Flags: []cli.Flag{
+					&cli.IntFlag{
+						Name:    "company",
+						Aliases: []string{"c"},
+						Value:   0,
+						Usage:   "Company ID",
+					},
+				},
+			},
+			{
 				Name:    "version",
 				Aliases: []string{},
 				Usage:   "Prints version of this binary",

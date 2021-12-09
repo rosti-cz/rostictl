@@ -6,6 +6,7 @@ all: release
 .PHONY: preparation
 preparation:
 	mkdir -p bin
+	go mod tidy
 
 bin/rostictl-${VERSION}.linux.arm: preparation
 	env GOOS=linux GOARCH=arm CGO_ENABLED=0 go build -o bin/rostictl-${VERSION}.linux.arm

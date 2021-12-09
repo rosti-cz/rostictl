@@ -133,27 +133,35 @@ func findCompany(client *rostiapi.Client, appState *state.RostiState, c *cli.Con
 		return 0, errors.New("no company found")
 	}
 
-	companyIDFromFlag := uint(c.Int("company"))
 	companyID := appState.CompanyID
 
-	if companyIDFromFlag != 0 {
-		companyID = companyIDFromFlag
-	} else if companyID == 0 {
-		if len(companies) == 1 {
-			companyID = companies[0].ID
-		} else if len(companies) > 1 {
-			fmt.Println("You have access to multiple companies, pick one of the companies below and use -c COMPANY_ID flag to call this command.")
-			fmt.Println("")
-			fmt.Printf("  %6s  Company name\n", "ID")
-			fmt.Printf("  %6s  ------------\n", "------")
-			for _, company := range companies {
-				fmt.Printf("  %6s  %s\n", strconv.Itoa(int(company.ID)), company.Name)
-			}
-			fmt.Println("")
-			return companyID, nil
-		} else {
-			return companyID, errors.New("no company found")
+	if len(companies) == 1 {
+		companyID = companies[0].ID
+	} else if len(companies) > 1 {
+		fmt.Println("You have access to multiple companies, pick one of the companies below:")
+		fmt.Println("")
+		fmt.Printf("  %6s  Company name\n", "ID")
+		fmt.Printf("  %6s  ------------\n", "------")
+		for _, company := range companies {
+			fmt.Printf("  %6s  %s\n", strconv.Itoa(int(company.ID)), company.Name)
 		}
+		fmt.Println("")
+
+		fmt.Print("Pick one of the IDs: ")
+
+		var companyIDRaw string
+		_, err := fmt.Scanln(&companyIDRaw)
+		if err != nil {
+			return companyID, fmt.Errorf("scanning user's input error: %v", err)
+		}
+
+		companyID_, err := strconv.Atoi(companyIDRaw)
+		companyID = uint(companyID_)
+		if err != nil {
+			return companyID, fmt.Errorf("input error: %v", err)
+		}
+	} else {
+		return companyID, errors.New("no company found")
 	}
 
 	var found bool
@@ -164,10 +172,66 @@ func findCompany(client *rostiapi.Client, appState *state.RostiState, c *cli.Con
 		}
 	}
 	if !found {
-		return companyID, errors.New("selected company (" + strconv.Itoa(int(companyIDFromFlag)) + ") not found")
+		return companyID, errors.New("selected company (" + strconv.Itoa(int(companyID)) + ") not found")
 	}
 
 	return companyID, nil
+}
+
+// Returns ID of selected application
+func selectApp(client *rostiapi.Client) (uint, error) {
+	apps, err := client.GetApps()
+	if err != nil {
+		return 0, fmt.Errorf("listing app error: %v", err)
+	}
+
+	var appID uint
+
+	if len(apps) == 0 {
+		return appID, errors.New("no app found")
+	} else if len(apps) == 1 {
+		appID = apps[0].ID
+		fmt.Println("WARNING: Only one application found, selecting that one.")
+	} else {
+		fmt.Println("Select application to import. There won't be any change to the application\n" +
+			"but rosti.state file will be generated for the current working directory and\n" +
+			"you will be able to deploy it as selected app.")
+		fmt.Println("")
+		fmt.Printf("  %6s  App name\n", "ID")
+		fmt.Printf("  %6s  --------\n", "------")
+
+		for _, app := range apps {
+			fmt.Printf("  %6s  %s\n", strconv.Itoa(int(app.ID)), app.Name)
+		}
+		fmt.Println("")
+
+		fmt.Print("Pick one of the IDs: ")
+
+		var appIDRaw string
+		_, err := fmt.Scanln(&appIDRaw)
+		if err != nil {
+			return appID, fmt.Errorf("scanning user's input error: %v", err)
+		}
+
+		appID_, err := strconv.Atoi(appIDRaw)
+		appID = uint(appID_)
+		if err != nil {
+			return appID, fmt.Errorf("input error: %v", err)
+		}
+	}
+
+	var found bool
+	for _, app := range apps {
+		if app.ID == appID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return appID, fmt.Errorf("selected app (%d) not found", appID)
+	}
+
+	return appID, nil
 }
 
 // Selects plan based on Rostifile or default settings

@@ -67,7 +67,7 @@ func (c *Client) GetApps() ([]App, error) {
 
 	if statusCode != 200 {
 		if c.ExtraError != nil {
-			c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %b", body)))
+			c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %s", body)))
 		}
 		return apps, errors.New("non-200 HTTP status code returned")
 	}
@@ -91,7 +91,7 @@ func (c *Client) GetApp(id uint) (App, error) {
 
 	if statusCode != 200 {
 		if c.ExtraError != nil {
-			c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %b", body)))
+			c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %s", body)))
 		}
 		return app, errors.New("non-200 HTTP status code returned")
 	}
@@ -117,7 +117,7 @@ func (c *Client) CreateApp(app *App) (*App, error) {
 		err = json.Unmarshal(body, &responseError)
 		if err != nil {
 			if c.ExtraError != nil {
-				c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %b", body)))
+				c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %s", body)))
 			}
 			return nil, fmt.Errorf("problem while decoding error message: %w", err)
 		}
@@ -149,7 +149,7 @@ func (c *Client) UpdateApp(app *App) (*App, error) {
 		err = json.Unmarshal(body, &responseError)
 		if err != nil {
 			if c.ExtraError != nil {
-				c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %b", body)))
+				c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %s", body)))
 			}
 			return nil, fmt.Errorf("problem while decoding error message: %w", err)
 		}
@@ -177,7 +177,7 @@ func (c *Client) DeleteApp(id uint) error {
 
 	if statusCode != 200 {
 		if c.ExtraError != nil {
-			c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %b", body)))
+			c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %s", body)))
 		}
 		return errors.New("non-200 HTTP status code returned")
 	}
@@ -195,7 +195,7 @@ func (c *Client) DoApp(id uint, action string) error {
 	body, statusCode, err := c.call("PUT", strconv.Itoa(int(c.CompanyID))+"/"+"apps-action/"+strconv.Itoa(int(id))+"/", body)
 	if statusCode != 200 {
 		if c.ExtraError != nil {
-			c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %b", body)))
+			c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %s", body)))
 		}
 
 		responseError := ErrorResponse{}
@@ -221,7 +221,7 @@ func (c *Client) GetPlans() ([]Plan, error) {
 
 	if statusCode != 200 {
 		if c.ExtraError != nil {
-			c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %b", body)))
+			c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %s", body)))
 		}
 		return plans, errors.New("non-200 HTTP status code returned")
 	}
@@ -245,7 +245,7 @@ func (c *Client) GetCompanies() ([]Company, error) {
 
 	if statusCode != 200 {
 		if c.ExtraError != nil {
-			c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %b", body)))
+			c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %s", body)))
 		}
 		return companies, errors.New("non-200 HTTP status code returned (" + string(body) + ")")
 	}
@@ -269,7 +269,7 @@ func (c *Client) GetRuntimes() ([]Runtime, error) {
 
 	if statusCode != 200 {
 		if c.ExtraError != nil {
-			c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %b", body)))
+			c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %s", body)))
 		}
 		return runtimes, errors.New("non-200 HTTP status code returned")
 	}
@@ -293,7 +293,7 @@ func (c *Client) GetAppStatus(id uint) (AppStatus, error) {
 
 	if statusCode != 200 {
 		if c.ExtraError != nil {
-			c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %b", body)))
+			c.ExtraError.Write([]byte(fmt.Sprintf("Response body: %s", body)))
 		}
 		return appStatus, errors.New("non-200 HTTP status code returned")
 	}
