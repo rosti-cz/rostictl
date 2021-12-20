@@ -81,11 +81,18 @@ func createArchive(source, target string, exclude []string) error {
 
 // Returns list of SSH key found in the current system.
 // It looks for the keys in ~/.ssh which should be valid for Linux, Mac and possibly Windows.
-// The function returns paths to private key, public key and error
+// The function returns paths to the private key, public key and error if there is any
 func findSSHKey() (string, string, error) {
-	keyFileNames := []string{
-		// "id_ed25519", // Not supported by current dropbear version
-		"id_rsa",
+	dirname, err := os.UserHomeDir()
+	if err != nil {
+		return "", "", fmt.Errorf("getting user info error: %w", err)
+	}
+
+	sshKeysDirectory := path.Join(dirname, ".ssh")
+
+	keysFilenames, err := getLocalSSHKeys(sshKeysDirectory)
+	if err != nil {
+		return "", "", fmt.Errorf("loading local SSH keys error: %w", err)
 	}
 
 	user, err := user.Current()
@@ -93,27 +100,83 @@ func findSSHKey() (string, string, error) {
 		return "", "", fmt.Errorf("getting user info error: %w", err)
 	}
 
-	for _, keyFilename := range keyFileNames {
-		privateKeyPath := path.Join(user.HomeDir, ".ssh", keyFilename)
-		publicKeyPath := path.Join(user.HomeDir, ".ssh", keyFilename+".pub")
-
-		_, errPrivate := os.Stat(privateKeyPath)
-		_, errPublic := os.Stat(publicKeyPath)
-
-		if !os.IsNotExist(errPrivate) && !os.IsNotExist(errPublic) {
-			return privateKeyPath, publicKeyPath, nil
+	// Manually entered key
+	if len(keysFilenames) == 0 {
+		fmt.Println("No local SSH key found. Please enter path to your private key manually: ")
+		fmt.Print("> ")
+		var keyPath string
+		_, err := fmt.Scanln(&keyPath)
+		if err != nil {
+			return "", "", fmt.Errorf("reading user input error: %w", err)
 		}
+		keyPath = strings.Replace(keyPath, "~", user.HomeDir, 1)
+
+		_, err = os.Stat(keyPath)
+		if os.IsNotExist(err) {
+			return "", "", fmt.Errorf("file %s does not exist", keyPath)
+		}
+
+		_, err = os.Stat(keyPath + ".pub")
+		if os.IsNotExist(err) {
+			return "", "", fmt.Errorf("file %s.pub does not exist", keyPath)
+		}
+
+		return keyPath, keyPath + ".pub", nil
 	}
 
-	return "", "", errors.New("no ssh key found")
+	// If there is only one discovered key
+	if len(keysFilenames) == 1 {
+
+	}
+
+	// Select one of the discovered keys
+	fmt.Printf("Following keys were discovered in %s.\n", sshKeysDirectory)
+	fmt.Println("Please select one: ")
+	fmt.Println("")
+
+	fmt.Printf("  %6s  Key name\n", "ID")
+	fmt.Printf("  %6s  ------------\n", "------")
+	var index int = 1
+	for _, keyFilename := range keysFilenames {
+		fmt.Printf("  %6s  %s\n", strconv.Itoa(index), keyFilename)
+		index += 1
+	}
+	fmt.Println("")
+	fmt.Print("> ")
+
+	var selectionRaw string
+	_, err = fmt.Scanln(&selectionRaw)
+	if err != nil {
+		return "", "", fmt.Errorf("reading user input error: %w", err)
+	}
+
+	selection, err := strconv.Atoi(selectionRaw)
+	if err != nil {
+		return "", "", fmt.Errorf("user input error: %w", err)
+	}
+
+	if selection < 1 || selection > len(keysFilenames) {
+		fmt.Println("ERROR: Invalid key index entered")
+		os.Exit(1)
+	}
+
+	privateKeyPath := path.Join(user.HomeDir, ".ssh", keysFilenames[selection-1])
+	publicKeyPath := path.Join(user.HomeDir, ".ssh", keysFilenames[selection-1]+".pub")
+
+	_, err = os.Stat(privateKeyPath)
+	if os.IsNotExist(err) {
+		return "", "", fmt.Errorf("file %s does not exist", privateKeyPath)
+	}
+
+	_, err = os.Stat(publicKeyPath)
+	if os.IsNotExist(err) {
+		return "", "", fmt.Errorf("file %s does not exist", publicKeyPath)
+	}
+
+	return privateKeyPath, publicKeyPath, nil
 }
 
-func readLocalSSHPubKey() (string, error) {
-	_, publicKeyPath, err := findSSHKey()
-	if err != nil {
-		return "", err
-	}
-
+func readLocalSSHPubKey(publicKeyPath string) (string, error) {
 	body, err := ioutil.ReadFile(publicKeyPath)
 	if err != nil {
 		return "", err
@@ -124,6 +187,18 @@ func readLocalSSHPubKey() (string, error) {
 
 // findCompany returns company ID based the environment
 func findCompany(client *rostiapi.Client, appState *state.RostiState, c *cli.Context) (uint, error) {
+	// When company is forced by a parameter
+	if c.Int("company") != 0 {
+		return uint(c.Int("company")), nil
+	}
+
+	// When company is set already
+	companyID := appState.CompanyID
+	if companyID != 0 {
+		return companyID, nil
+	}
+
+	// When company is not set yet
 	companies, err := client.GetCompanies()
 	if err != nil {
 		return 0, err
@@ -132,8 +207,6 @@ func findCompany(client *rostiapi.Client, appState *state.RostiState, c *cli.Con
 	if len(companies) == 0 {
 		return 0, errors.New("no company found")
 	}
-
-	companyID := appState.CompanyID
 
 	if len(companies) == 1 {
 		companyID = companies[0].ID

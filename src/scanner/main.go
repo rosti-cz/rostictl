@@ -29,9 +29,9 @@ func Scan(directory string) (RostifileBits, error) {
 	fmt.Println("  2 Python")
 	fmt.Println("  3 Node.js")
 	fmt.Println("  4 Binary")
-	fmt.Println("Last option can be used for languages producing static binaries or archives that listens on HTTP port 8080.")
 	fmt.Println("Last option can be used for languages producing static binaries or")
-	fmt.Println("archives that listens on HTTP port 8080. That can be Golang, C but also Deno and others.")
+	fmt.Println("archives that listens on HTTP port 8080. That can be Golang, C but")
+	fmt.Println("also Deno and others.")
 
 	fmt.Print("Which technology this project uses? [1-4]: ")
 	fmt.Scanln(&tech)

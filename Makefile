@@ -1,10 +1,11 @@
-VERSION=0.3
+VERSION=0.4
 
 .PHONY: all
 all: release
 
 .PHONY: preparation
 preparation:
+	sed -i "s/const version = \"[0-9\.]*\"/const version = \"${VERSION}\"/" main.go
 	mkdir -p bin
 	go mod tidy
 

@@ -7,7 +7,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const version = "0.1"
+const version = "0.4"
 
 func handleError(err error) {
 	log.Fatalln(err)

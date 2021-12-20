@@ -14,7 +14,7 @@ source_path: .
 # Plan of the service, possible values are: static,start,start+,normal,normal+,pro,pro+,business,business+. Default is start.
 plan: start
 # Image of the application, Default is the latest.
-runtime: rosti/runtime:2020-10
+runtime: rosti/runtime:2022.01-1
 # List of background processes running in supervisor
 processes:
 - name: gunicorn

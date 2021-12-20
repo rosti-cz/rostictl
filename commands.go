@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/user"
-	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -20,29 +18,47 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// Import existing application
+func commandImport(c *cli.Context) error {
+	fmt.Println(".. loading configuration")
+	config := config.Load()
+
+	fmt.Println(".. setting up API client")
+	client := rostiapi.Client{
+		Token:      config.Token,
+		ExtraError: os.Stderr,
+	}
+
+	appState := state.RostiState{}
+
+	// Pick the right company
+	fmt.Println(".. loading list of your companies")
+	companyID, err := findCompany(&client, &appState, c)
+	if err != nil {
+		return err
+	}
+	appState.CompanyID = companyID
+	client.CompanyID = companyID
+
+	appID, err := selectApp(&client)
+	if err != nil {
+		return err
+	}
+	appState.ApplicationID = appID
+	fmt.Println(".. done")
+
+	fmt.Println(".. writing .rosti.state")
+	err = state.Write(&appState)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Deploys or re-deploys an application
 func commandUp(c *cli.Context) error {
 	config := config.Load()
-
-	// SSH key
-	user, err := user.Current()
-	if err != nil {
-		return fmt.Errorf("getting user info error: %w", err)
-	}
-
-	privateSSHKeyPath, _, err := findSSHKey()
-	if err != nil {
-		fmt.Println("Your SSH key cannot be located.")
-		fmt.Println("Please put your public and private RSA key (only type supported) into:")
-		fmt.Println(" ", path.Join(user.HomeDir, ".ssh", "id_rsa"))
-		fmt.Println(" ", path.Join(user.HomeDir, ".ssh", "id_rsa.pub"))
-		fmt.Println("and try again. You generate a new key with these commands:")
-		fmt.Println("")
-		fmt.Println("  mkdir -p ~/.ssh")
-		fmt.Println("  ssh-keygen -t rsa -f ~/.ssh/id_rsa")
-		fmt.Println("")
-		return fmt.Errorf("SSH key problem: %w", err)
-	}
 
 	// Rostifile and statefile
 	fmt.Println(".. loading Rostifile")
@@ -63,15 +79,37 @@ func commandUp(c *cli.Context) error {
 	}
 	defer state.Write(appState)
 
-	// Pick the right company
-	fmt.Println(".. loading list of your companies")
-	companyID, err := findCompany(&client, appState, c)
-	if err != nil {
-		return err
+	// SSH key
+	if len(appState.SSHKeyPath) == 0 {
+		fmt.Println(".. SSH key not found in the state file, trying to figure this out")
+		privateSSHKeyPath, _, err := findSSHKey()
+		if err != nil {
+			return fmt.Errorf("SSH key problem: %w", err)
+		}
+		appState.SSHKeyPath = privateSSHKeyPath
+	} else {
+		_, err := os.Stat(appState.SSHKeyPath)
+		if os.IsNotExist(err) {
+			fmt.Println(".. SSH key configured in state file but the file doesn't not exist, trying to figure this out")
+			privateSSHKeyPath, _, err := findSSHKey()
+			if err != nil {
+				return fmt.Errorf("SSH key problem: %w", err)
+			}
+			appState.SSHKeyPath = privateSSHKeyPath
+		}
 	}
 
-	appState.CompanyID = companyID
-	client.CompanyID = companyID
+	// Pick the right company
+	if appState.CompanyID == 0 {
+		fmt.Println(".. loading list of your companies")
+		companyID, err := findCompany(&client, appState, c)
+		if err != nil {
+			return err
+		}
+		appState.CompanyID = companyID
+	}
+
+	client.CompanyID = appState.CompanyID
 
 	// Select plan
 	planID, err := selectPlan(&client, rostifile)
@@ -113,7 +151,7 @@ func commandUp(c *cli.Context) error {
 			}
 		}
 
-		sshPubKey, err := readLocalSSHPubKey()
+		sshPubKey, err := readLocalSSHPubKey(appState.SSHPublicKeyPath())
 		if err != nil {
 			return err
 		}
@@ -141,7 +179,7 @@ func commandUp(c *cli.Context) error {
 		// Create a new app
 		fmt.Printf(".. creating a new application %s \n", rostifile.Name)
 
-		sshPubKey, err := readLocalSSHPubKey()
+		sshPubKey, err := readLocalSSHPubKey(appState.SSHPublicKeyPath())
 		if err != nil {
 			return err
 		}
@@ -173,11 +211,11 @@ func commandUp(c *cli.Context) error {
 		Server:     newApp.SSHAccess[0].Hostname,
 		Port:       int(newApp.SSHAccess[0].Port),
 		Username:   newApp.SSHAccess[0].Username,
-		SSHKeyPath: privateSSHKeyPath,
+		SSHKeyPath: appState.SSHKeyPath,
 	}
 
 	// Test SSH connection
-	fmt.Println(".. checking if SSH daemon is ready")
+	fmt.Println(".. waiting for SSH daemon to be ready")
 	testCounter := 0
 	for {
 		_, err := sshClient.Run("echo 1")
