@@ -59,6 +59,12 @@ type Runtime struct {
 	Show    bool   `json:"show"`    // shown in admin
 }
 
+// AppTech keeps into about a single Runtime's technology and its version
+type AppTech struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
 // AppStatus contains status information about one application
 type AppStatus struct {
 	Errors     []string `json:"errors"`
@@ -75,4 +81,6 @@ type AppStatus struct {
 		Usage float64 `json:"usage"`
 		Limit float64 `json:"limit"`
 	} `json:"memory"`
+	PrimaryTech AppTech   `json:"primary_tech"`
+	Techs       []AppTech `json:"techs"`
 }

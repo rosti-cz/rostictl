@@ -520,10 +520,13 @@ func commandStatus(c *cli.Context) error {
 	fmt.Println(".. loading application status")
 	status, err := client.GetAppStatus(appState.ApplicationID)
 	if err != nil {
-		return err
+		return fmt.Errorf("GetAppStatus error: %v", err)
 	}
 
 	app, err := client.GetApp(appState.ApplicationID)
+	if err != nil {
+		return fmt.Errorf("GetApp error: %v", err)
+	}
 	domains := app.Domains
 
 	fmt.Println()
