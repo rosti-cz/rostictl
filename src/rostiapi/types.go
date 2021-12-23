@@ -1,5 +1,7 @@
 package rostiapi
 
+import "strings"
+
 // SSHAccess holds access via SSH protocol
 type SSHAccess struct {
 	Hostname string `json:"hostname"`
@@ -63,6 +65,16 @@ type Runtime struct {
 type AppTech struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
+}
+
+func (a *AppTech) PrintableName() string {
+	if a.Name == "node" {
+		return "Node.js"
+	} else if a.Name == "php" {
+		return "PHP"
+	}
+
+	return strings.Title(a.Name)
 }
 
 // AppStatus contains status information about one application

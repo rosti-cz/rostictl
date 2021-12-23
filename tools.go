@@ -401,8 +401,6 @@ func printAppStatus(domains []string, status rostiapi.AppStatus, app rostiapi.Ap
 		fmt.Printf("    Storage: - / %.2f GB (over limit: %.2f GB)\n", status.Storage.Limit, status.Storage.OverLimit)
 	}
 
-	fmt.Printf("  Primary technology: %s %s\n", status.PrimaryTech.Name, status.PrimaryTech.Version)
-
 	if status.DNSStatus {
 		fmt.Println("  DNS: all good")
 	} else {
@@ -433,5 +431,17 @@ func printAppStatus(domains []string, status rostiapi.AppStatus, app rostiapi.Ap
 			fmt.Println("  * " + message)
 		}
 	}
+
+	fmt.Println("")
+	fmt.Println("")
+	fmt.Println("Available technologies:")
+	fmt.Println("")
+
+	for _, tech := range status.Techs {
+		fmt.Printf("  %-10s %s\n", tech.Name, tech.Version)
+	}
+
+	fmt.Println("")
+	fmt.Printf("  Primary technology: %s %s\n", status.PrimaryTech.PrintableName(), status.PrimaryTech.Version)
 	fmt.Println("")
 }

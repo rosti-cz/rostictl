@@ -1,5 +1,6 @@
 name: hellophp
 technology: php
+technology_version: 8.0.3
 https: false
 source_path: .
 processes:

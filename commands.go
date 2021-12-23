@@ -133,7 +133,7 @@ func commandUp(c *cli.Context) error {
 
 	// Create or update the application
 	var newApp *rostiapi.App
-	var appCreated bool
+	var appCreated bool // if true the app was just created
 	// Update existing app
 	if appState.ApplicationID > 0 {
 		fmt.Println(".. loading current state of the application")
@@ -233,26 +233,42 @@ func commandUp(c *cli.Context) error {
 	}
 
 	// Setup technology
-	if appCreated {
+	if appCreated { // This is processes only when app is freshly created
 		// Call rosti.sh to setup environment for selected technology
 		if len(rostifile.Technology) > 0 {
-			fmt.Println(".. settings up " + rostifile.Technology + " environment")
-			cmd := "/usr/local/bin/rosti " + rostifile.Technology
+			fmt.Println(".. deleting default code")
+			// Clean /srv/app and clean /srv/conf/supervisor.d/app.conf because we don't want the default application
+			cmd := "/bin/sh -c 'rm -rf /srv/app/* && rm -rf /srv/conf/supervisor.d/app.conf && supervisorctl reread && supervisorctl update'"
 			buf, err := sshClient.Run(cmd)
 			if err != nil {
 				fmt.Println("Command '" + cmd + "' error:")
 				fmt.Println(buf.String())
 				return err
 			}
+		}
+	}
 
-			// Clean /srv/app and clean /srv/conf/supervisor.d/app.conf because we don't want the default application
-			cmd = "/bin/sh -c 'rm -rf /srv/app/* && rm -rf /srv/conf/supervisor.d/app.conf && supervisorctl reread && supervisorctl update'"
-			buf, err = sshClient.Run(cmd)
-			if err != nil {
-				fmt.Println("Command '" + cmd + "' error:")
-				fmt.Println(buf.String())
-				return err
-			}
+	fmt.Println(".. loading application status")
+	status, err := client.GetAppStatus(appState.ApplicationID)
+	if err != nil {
+		return fmt.Errorf("GetAppStatus error: %v", err)
+	}
+
+	var buf *bytes.Buffer
+
+	if status.PrimaryTech.Name != rostifile.Technology || (status.PrimaryTech.Version != rostifile.TechnologyVersion && rostifile.TechnologyVersion != "") {
+		fmt.Println(".. technology change detected, settings up " + rostifile.Technology + " environment")
+		cmd := "/usr/local/bin/rosti " + rostifile.Technology
+
+		if rostifile.TechnologyVersion != "" {
+			cmd = "/usr/local/bin/rosti " + rostifile.Technology + " " + rostifile.TechnologyVersion
+		}
+
+		buf, err = sshClient.Run(cmd)
+		if err != nil {
+			fmt.Println("Command '" + cmd + "' error:")
+			fmt.Println(buf.String())
+			return err
 		}
 	}
 
@@ -286,8 +302,6 @@ func commandUp(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
-	var buf *bytes.Buffer
 
 	for _, cmd := range rostifile.BeforeCommands {
 		fmt.Printf(".. running command: %s\n", cmd)
@@ -377,14 +391,17 @@ redirect_stderr=true
 	fmt.Println(".. all done, let's check status of the application")
 
 	// Check app's status
-	fmt.Println(".. loading current application status")
-	status, err := client.GetAppStatus(appState.ApplicationID)
+	fmt.Println(".. loading application status")
+	status, err = client.GetAppStatus(appState.ApplicationID)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(".. loading current application configuration")
+	fmt.Println(".. loading application configuration")
 	app, err := client.GetApp(appState.ApplicationID)
+	if err != nil {
+		return err
+	}
 
 	fmt.Println("")
 	printAppStatus(app.Domains, status, app)

@@ -19,7 +19,8 @@ type Rostifile struct {
 	// Runtime image of the application, default is defined in the backend, usually the latest.
 	Runtime string `yaml:"runtime,omitempty"`
 	// Primary technology configured in application's container
-	Technology string `yaml:"technology,omitempty"`
+	Technology        string `yaml:"technology,omitempty"`
+	TechnologyVersion string `yaml:"technology_version,omitempty"`
 	// List of domains configured on the load balancer for this application
 	Domains []string `yaml:"domains,omitempty"`
 	// Enable/Disable HTTPS for all domains
