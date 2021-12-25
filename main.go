@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const version = "0.4"
+const version = "0.5"
 
 func handleError(err error) {
 	log.Fatalln(err)
@@ -27,7 +27,14 @@ func main() {
 		Name:      "Rosti.cz CLI",
 		Usage:     "CLI application to manage projects hosted on Rosti.cz",
 		UsageText: "This command line tool reads Rostifile located in the current work directory and runs different commands with parameters defined in this file.\n\n     rostictl [global options] command [command options] [arguments...]",
-		Flags:     []cli.Flag{},
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:    "no-color",
+				Aliases: []string{"nocolor"},
+				Usage:   "Terminal output without colors",
+			},
+		},
+		Before: noColor,
 		Commands: []*cli.Command{
 			{
 				Name:    "up",

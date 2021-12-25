@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/rosti-cz/cli/src/parser"
 	"github.com/rosti-cz/cli/src/rostiapi"
 	"github.com/rosti-cz/cli/src/state"
@@ -449,4 +450,13 @@ func printAppStatus(domains []string, status rostiapi.AppStatus, app rostiapi.Ap
 	}
 
 	fmt.Println("")
+}
+
+// noColor disables color output
+func noColor(c *cli.Context) error {
+	if c.Bool("no-color") {
+		color.NoColor = true
+	}
+
+	return nil
 }
