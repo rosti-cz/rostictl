@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
 )
 
@@ -14,6 +15,12 @@ func handleError(err error) {
 }
 
 var app = cli.NewApp()
+
+var cRed *color.Color = color.New(color.FgRed)
+var cYellow *color.Color = color.New(color.FgYellow)
+var cGreen *color.Color = color.New(color.FgGreen)
+var cWhite *color.Color = color.New(color.FgWhite)
+var cGrey *color.Color = color.New(color.FgWhite)
 
 func main() {
 	app := &cli.App{

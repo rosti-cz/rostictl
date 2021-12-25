@@ -20,10 +20,10 @@ import (
 
 // Import existing application
 func commandImport(c *cli.Context) error {
-	fmt.Println(".. loading configuration")
+	cYellow.Println(".. loading configuration")
 	config := config.Load()
 
-	fmt.Println(".. setting up API client")
+	cYellow.Println(".. setting up API client")
 	client := rostiapi.Client{
 		Token:      config.Token,
 		ExtraError: os.Stderr,
@@ -32,7 +32,7 @@ func commandImport(c *cli.Context) error {
 	appState := state.RostiState{}
 
 	// Pick the right company
-	fmt.Println(".. loading list of your companies")
+	cYellow.Println(".. loading list of your companies")
 	companyID, err := findCompany(&client, &appState, c)
 	if err != nil {
 		return err
@@ -45,9 +45,9 @@ func commandImport(c *cli.Context) error {
 		return err
 	}
 	appState.ApplicationID = appID
-	fmt.Println(".. done")
+	cGreen.Println(".. done")
 
-	fmt.Println(".. writing .rosti.state")
+	cYellow.Println(".. writing .rosti.state")
 	err = state.Write(&appState)
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func commandUp(c *cli.Context) error {
 	config := config.Load()
 
 	// Rostifile and statefile
-	fmt.Println(".. loading Rostifile")
+	cYellow.Println(".. loading Rostifile")
 	rostifile, err := parser.Parse()
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func commandUp(c *cli.Context) error {
 		ExtraError: os.Stderr,
 	}
 
-	fmt.Println(".. loading state file")
+	cYellow.Println(".. loading state file")
 	appState, err := state.Load()
 	if err != nil {
 		return err
@@ -81,7 +81,7 @@ func commandUp(c *cli.Context) error {
 
 	// SSH key
 	if len(appState.SSHKeyPath) == 0 {
-		fmt.Println(".. SSH key not found in the state file, trying to figure this out")
+		cYellow.Println(".. SSH key not found in the state file, trying to figure this out")
 		privateSSHKeyPath, _, err := findSSHKey()
 		if err != nil {
 			return fmt.Errorf("SSH key problem: %w", err)
@@ -90,7 +90,7 @@ func commandUp(c *cli.Context) error {
 	} else {
 		_, err := os.Stat(appState.SSHKeyPath)
 		if os.IsNotExist(err) {
-			fmt.Println(".. SSH key configured in state file but the file doesn't not exist, trying to figure this out")
+			cYellow.Println(".. SSH key configured in state file but the file doesn't not exist, trying to figure this out")
 			privateSSHKeyPath, _, err := findSSHKey()
 			if err != nil {
 				return fmt.Errorf("SSH key problem: %w", err)
@@ -101,7 +101,7 @@ func commandUp(c *cli.Context) error {
 
 	// Pick the right company
 	if appState.CompanyID == 0 {
-		fmt.Println(".. loading list of your companies")
+		cYellow.Println(".. loading list of your companies")
 		companyID, err := findCompany(&client, appState, c)
 		if err != nil {
 			return err
@@ -136,7 +136,7 @@ func commandUp(c *cli.Context) error {
 	var appCreated bool // if true the app was just created
 	// Update existing app
 	if appState.ApplicationID > 0 {
-		fmt.Println(".. loading current state of the application")
+		cYellow.Println(".. loading current state of the application")
 		app, err := client.GetApp(appState.ApplicationID)
 		if err != nil {
 			return err
@@ -144,7 +144,7 @@ func commandUp(c *cli.Context) error {
 
 		// If it's down let's start it
 		if !app.Enabled {
-			fmt.Println(".. starting the application because it was off")
+			cYellow.Println(".. starting the application because it was off")
 			err = client.DoApp(appState.ApplicationID, "start")
 			if err != nil {
 				return err
@@ -157,7 +157,7 @@ func commandUp(c *cli.Context) error {
 		}
 
 		// Use update
-		fmt.Printf(".. updating existing application %s_%d \n", rostifile.Name, appState.ApplicationID)
+		cYellow.Printf(".. updating existing application %s_%d \n", rostifile.Name, appState.ApplicationID)
 
 		app = rostiapi.App{
 			ID:      appState.ApplicationID,
@@ -177,7 +177,7 @@ func commandUp(c *cli.Context) error {
 		}
 	} else {
 		// Create a new app
-		fmt.Printf(".. creating a new application %s \n", rostifile.Name)
+		cYellow.Printf(".. creating a new application %s \n", rostifile.Name)
 
 		sshPubKey, err := readLocalSSHPubKey(appState.SSHPublicKeyPath())
 		if err != nil {
@@ -215,12 +215,12 @@ func commandUp(c *cli.Context) error {
 	}
 
 	// Test SSH connection
-	fmt.Println(".. waiting for SSH daemon to be ready")
+	cYellow.Println(".. waiting for SSH daemon to be ready")
 	testCounter := 0
 	for {
 		_, err := sshClient.Run("echo 1")
 		if err == nil {
-			fmt.Println("     ready")
+			cGreen.Println("     ready")
 			break
 		}
 		if testCounter > 12 {
@@ -236,19 +236,21 @@ func commandUp(c *cli.Context) error {
 	if appCreated { // This is processes only when app is freshly created
 		// Call rosti.sh to setup environment for selected technology
 		if len(rostifile.Technology) > 0 {
-			fmt.Println(".. deleting default code")
+			cRed.Println(".. deleting default code")
 			// Clean /srv/app and clean /srv/conf/supervisor.d/app.conf because we don't want the default application
 			cmd := "/bin/sh -c 'rm -rf /srv/app/* && rm -rf /srv/conf/supervisor.d/app.conf && supervisorctl reread && supervisorctl update'"
 			buf, err := sshClient.Run(cmd)
 			if err != nil {
-				fmt.Println("Command '" + cmd + "' error:")
+				cYellow.Print("Command '")
+				cWhite.Print(cmd)
+				cYellow.Println("' error:")
 				fmt.Println(buf.String())
 				return err
 			}
 		}
 	}
 
-	fmt.Println(".. loading application status")
+	cYellow.Println(".. loading application status")
 	status, err := client.GetAppStatus(appState.ApplicationID)
 	if err != nil {
 		return fmt.Errorf("GetAppStatus error: %v", err)
@@ -257,7 +259,9 @@ func commandUp(c *cli.Context) error {
 	var buf *bytes.Buffer
 
 	if status.PrimaryTech.Name != rostifile.Technology || (status.PrimaryTech.Version != rostifile.TechnologyVersion && rostifile.TechnologyVersion != "") {
-		fmt.Println(".. technology change detected, settings up " + rostifile.Technology + " environment")
+		cYellow.Print(".. technology change detected, settings up ")
+		cWhite.Print(rostifile.Technology)
+		cYellow.Println(" environment")
 		cmd := "/usr/local/bin/rosti " + rostifile.Technology
 
 		if rostifile.TechnologyVersion != "" {
@@ -266,8 +270,10 @@ func commandUp(c *cli.Context) error {
 
 		buf, err = sshClient.Run(cmd)
 		if err != nil {
-			fmt.Println("Command '" + cmd + "' error:")
-			fmt.Println(buf.String())
+			fmt.Print("Command '")
+			cWhite.Print(cmd)
+			cYellow.Println("' error:")
+			cRed.Println(buf.String())
 			return err
 		}
 	}
@@ -277,21 +283,23 @@ func commandUp(c *cli.Context) error {
 		for _, cmd := range rostifile.InitialCommands {
 			buf, err := sshClient.Run(cmd)
 			if err != nil {
-				fmt.Println("Command '" + cmd + "' error:")
-				fmt.Println(buf.String())
+				fmt.Print("Command '")
+				cWhite.Print(cmd)
+				cYellow.Println("' error:")
+				cRed.Println(buf.String())
 				return err
 			}
 		}
 	}
 
 	// Deploy files
-	fmt.Println(".. creating an archive")
+	cYellow.Println(".. creating an archive")
 	err = createArchive(rostifile.SourcePath, "/tmp/_archive.tar", rostifile.Exclude) // TODO: create a proper temporary file here
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(".. copying archive into the container")
+	cYellow.Println(".. copying archive into the container")
 	archive, err := os.Open("/tmp/_archive.tar")
 	if err != nil {
 		return err
@@ -304,21 +312,24 @@ func commandUp(c *cli.Context) error {
 	}
 
 	for _, cmd := range rostifile.BeforeCommands {
-		fmt.Printf(".. running command: %s\n", cmd)
+		cYellow.Print(".. running command:")
+		cWhite.Println(cmd)
 		buf, err = sshClient.Run("/bin/sh -c '" + cmd + "'")
 		if err != nil {
-			fmt.Println("Command '" + cmd + "' error:")
-			fmt.Println(buf.String())
+			fmt.Print("Command '")
+			cWhite.Print(cmd)
+			cYellow.Println("' error:")
+			cRed.Println(buf.String())
 			return err
 		}
 	}
 
-	fmt.Println(".. unarchiving code in the container")
+	cYellow.Println(".. unarchiving code in the container")
 	cmd := "/bin/sh -c \"mkdir -p /srv/app && mv _archive.tar /srv/app/ && cd /srv/app && tar xf _archive.tar && rm _archive.tar\""
 	buf, err = sshClient.Run(cmd)
 	if err != nil {
-		fmt.Println("Unarchiving error. Command output:")
-		fmt.Println(buf.String())
+		cRed.Println("Unarchiving error. Command output:")
+		cRed.Println(buf.String())
 		return err
 	}
 
@@ -326,15 +337,17 @@ func commandUp(c *cli.Context) error {
 		fmt.Printf(".. running command: %s\n", cmd)
 		buf, err = sshClient.Run("/bin/sh -c '" + cmd + "'")
 		if err != nil {
-			fmt.Println("Command '" + cmd + "' error:")
-			fmt.Println(buf.String())
+			fmt.Print("Command '")
+			cWhite.Print(cmd)
+			cYellow.Println("' error:")
+			cRed.Println(buf.String())
 			return err
 		}
 	}
 
 	// Setup crontab
 	if len(rostifile.Crontabs) > 0 {
-		fmt.Println(".. setting up crontabs")
+		cYellow.Println(".. setting up crontabs")
 		err = sshClient.SendFile("/srv/conf/crontab", strings.Join(rostifile.Crontabs, "\n")+"\n")
 		if err != nil {
 			return fmt.Errorf("uploading crontabs error: %w", err)
@@ -347,7 +360,7 @@ func commandUp(c *cli.Context) error {
 
 	// Setup background processes
 	if len(rostifile.Processes) > 0 {
-		fmt.Println(".. setting up supervisor processes")
+		cYellow.Println(".. setting up supervisor processes")
 		var processes []string
 		for _, process := range rostifile.Processes {
 			processTemplate := `[program:` + process.Name + `]
@@ -388,23 +401,23 @@ redirect_stderr=true
 	}
 
 	// Done
-	fmt.Println(".. all done, let's check status of the application")
+	cYellow.Println(".. all done, let's check status of the application")
 
 	// Check app's status
-	fmt.Println(".. loading application status")
+	cYellow.Println(".. loading application status")
 	status, err = client.GetAppStatus(appState.ApplicationID)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(".. loading application configuration")
+	cYellow.Println(".. loading application configuration")
 	app, err := client.GetApp(appState.ApplicationID)
 	if err != nil {
 		return err
 	}
 
 	fmt.Println("")
-	printAppStatus(app.Domains, status, app)
+	printAppStatus(app.Domains, status, app, false)
 
 	fmt.Println("")
 	fmt.Println("Note: This output doesn't have to be precise, because container")
@@ -418,7 +431,7 @@ redirect_stderr=true
 func commandDown(c *cli.Context) error {
 	config := config.Load()
 
-	fmt.Println(".. loading state file")
+	cYellow.Println(".. loading state file")
 	appState, err := state.Load()
 	if err != nil {
 		return err
@@ -431,19 +444,19 @@ func commandDown(c *cli.Context) error {
 		ExtraError: os.Stderr,
 	}
 
-	fmt.Println(".. loading Rostifile")
+	cYellow.Println(".. loading Rostifile")
 	rostifile, err := parser.Parse()
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf(".. stopping application %s_%d\n", rostifile.Name, appState.ApplicationID)
+	cYellow.Printf(".. stopping application %s_%d\n", rostifile.Name, appState.ApplicationID)
 	err = client.DoApp(appState.ApplicationID, "stop")
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(".. all done!")
+	cGreen.Println(".. all done!")
 
 	return nil
 }
@@ -451,7 +464,7 @@ func commandDown(c *cli.Context) error {
 func commandStart(c *cli.Context) error {
 	config := config.Load()
 
-	fmt.Println(".. loading state file")
+	cYellow.Println(".. loading state file")
 	appState, err := state.Load()
 	if err != nil {
 		return err
@@ -464,19 +477,20 @@ func commandStart(c *cli.Context) error {
 		ExtraError: os.Stderr,
 	}
 
-	fmt.Println(".. loading Rostifile")
+	cYellow.Println(".. loading Rostifile")
 	rostifile, err := parser.Parse()
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf(".. starting application %s_%d\n", rostifile.Name, appState.ApplicationID)
+	cYellow.Print(".. starting application ")
+	cWhite.Println(fmt.Sprintf("%s_%d", rostifile.Name, appState.ApplicationID))
 	err = client.DoApp(appState.ApplicationID, "start")
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(".. all done")
+	cGreen.Println(".. all done")
 
 	return nil
 }
@@ -484,7 +498,7 @@ func commandStart(c *cli.Context) error {
 func commandRemove(c *cli.Context) error {
 	config := config.Load()
 
-	fmt.Println(".. loading state file")
+	cYellow.Println(".. loading state file")
 	appState, err := state.Load()
 	if err != nil {
 		return err
@@ -495,26 +509,27 @@ func commandRemove(c *cli.Context) error {
 		CompanyID: appState.CompanyID,
 	}
 
-	fmt.Println(".. loading Rostifile")
+	cYellow.Println(".. loading Rostifile")
 	rostifile, err := parser.Parse()
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf(".. removing application %s_%d\n", rostifile.Name, appState.ApplicationID)
+	cRed.Print(".. removing application ")
+	cWhite.Println(fmt.Sprintf("%s_%d\n", rostifile.Name, appState.ApplicationID))
 	err = client.DeleteApp(appState.ApplicationID)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(".. removing .rosti.state file")
+	cRed.Println(".. removing .rosti.state file")
 
 	err = state.Remove()
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(".. all done!")
+	cGreen.Println(".. all done!")
 
 	return nil
 }
@@ -522,7 +537,7 @@ func commandRemove(c *cli.Context) error {
 func commandStatus(c *cli.Context) error {
 	config := config.Load()
 
-	fmt.Println(".. loading state file")
+	cYellow.Println(".. loading state file")
 	appState, err := state.Load()
 	if err != nil {
 		return err
@@ -534,7 +549,7 @@ func commandStatus(c *cli.Context) error {
 		ExtraError: os.Stderr,
 	}
 
-	fmt.Println(".. loading application status")
+	cYellow.Println(".. loading application status")
 	status, err := client.GetAppStatus(appState.ApplicationID)
 	if err != nil {
 		return fmt.Errorf("GetAppStatus error: %v", err)
@@ -547,7 +562,7 @@ func commandStatus(c *cli.Context) error {
 	domains := app.Domains
 
 	fmt.Println()
-	printAppStatus(domains, status, app)
+	printAppStatus(domains, status, app, true)
 
 	return nil
 }
@@ -565,10 +580,10 @@ func commandPlans(c *cli.Context) error {
 		return err
 	}
 
-	fmt.Printf("  %12s  Plan\n", "Slug")
-	fmt.Printf("  %12s  ------------\n", "------------")
+	cGrey.Printf("  %12s  Plan\n", "Slug")
+	cGrey.Printf("  %12s  ------------\n", "------------")
 	for _, plan := range plans {
-		fmt.Printf("  %12s  %s\n", strings.ToLower(plan.Name), plan.Name)
+		fmt.Printf("  %12s  %s\n", cYellow.Sprint(strings.ToLower(plan.Name)), cGrey.Sprint(plan.Name))
 	}
 	fmt.Println("")
 	fmt.Println("Note: Use slug in your Rostifile.")
@@ -589,10 +604,10 @@ func commandCompanies(c *cli.Context) error {
 		return err
 	}
 
-	fmt.Printf("  %6s  Company name\n", "ID")
-	fmt.Printf("  %6s  ------------\n", "------")
+	cGrey.Printf("  %6s  Company name\n", "ID")
+	cGrey.Printf("  %6s  ------------\n", "------")
 	for _, company := range companies {
-		fmt.Printf("  %6s  %s\n", strconv.Itoa(int(company.ID)), company.Name)
+		fmt.Printf("  %6s  %s\n", cYellow.Sprint(strconv.Itoa(int(company.ID))), cWhite.Sprint(company.Name))
 	}
 
 	return nil
@@ -611,13 +626,13 @@ func commandRuntimes(c *cli.Context) error {
 		return err
 	}
 
-	fmt.Printf("  Runtime\n")
-	fmt.Printf("  ---------------------------\n")
+	cGrey.Printf("  Runtime\n")
+	cGrey.Printf("  ---------------------------\n")
 	for _, runtime := range runtimes {
 		if runtime.Default {
-			fmt.Printf(" *%s\n", runtime.Image)
+			cGreen.Printf(" *%s\n", runtime.Image)
 		} else {
-			fmt.Printf("  %s\n", runtime.Image)
+			cYellow.Printf("  %s\n", runtime.Image)
 		}
 	}
 
@@ -627,7 +642,7 @@ func commandRuntimes(c *cli.Context) error {
 func commandInit(c *cli.Context) error {
 	_, err := os.Stat("./Rostifile")
 	if !os.IsNotExist(err) {
-		fmt.Println("Rostifile already exists in this directory")
+		cRed.Println("Rostifile already exists in this directory")
 		os.Exit(1)
 	}
 

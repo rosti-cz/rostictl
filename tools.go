@@ -102,8 +102,8 @@ func findSSHKey() (string, string, error) {
 
 	// Manually entered key
 	if len(keysFilenames) == 0 {
-		fmt.Println("No local SSH key found. Please enter path to your private key manually: ")
-		fmt.Print("> ")
+		cRed.Println("No local SSH key found. Please enter path to your private key manually: ")
+		cYellow.Print("> ")
 		var keyPath string
 		_, err := fmt.Scanln(&keyPath)
 		if err != nil {
@@ -130,19 +130,19 @@ func findSSHKey() (string, string, error) {
 	}
 
 	// Select one of the discovered keys
-	fmt.Printf("Following keys were discovered in %s.\n", sshKeysDirectory)
-	fmt.Println("Please select one: ")
+	cWhite.Printf("Following keys were discovered in %s.\n", sshKeysDirectory)
+	cWhite.Println("Please select one: ")
 	fmt.Println("")
 
-	fmt.Printf("  %6s  Key name\n", "ID")
-	fmt.Printf("  %6s  ------------\n", "------")
+	cGrey.Printf("  %6s  Key name\n", "ID")
+	cGrey.Printf("  %6s  ------------\n", "------")
 	var index int = 1
 	for _, keyFilename := range keysFilenames {
-		fmt.Printf("  %6s  %s\n", strconv.Itoa(index), keyFilename)
+		fmt.Printf("  %6s  %s\n", cYellow.Sprint(strconv.Itoa(index)), cWhite.Sprint(keyFilename))
 		index += 1
 	}
 	fmt.Println("")
-	fmt.Print("> ")
+	cYellow.Print("> ")
 
 	var selectionRaw string
 	_, err = fmt.Scanln(&selectionRaw)
@@ -156,7 +156,7 @@ func findSSHKey() (string, string, error) {
 	}
 
 	if selection < 1 || selection > len(keysFilenames) {
-		fmt.Println("ERROR: Invalid key index entered")
+		cRed.Println("ERROR: Invalid key index entered")
 		os.Exit(1)
 	}
 
@@ -264,21 +264,22 @@ func selectApp(client *rostiapi.Client) (uint, error) {
 		return appID, errors.New("no app found")
 	} else if len(apps) == 1 {
 		appID = apps[0].ID
-		fmt.Println("WARNING: Only one application found, selecting that one.")
+		cYellow.Println("WARNING: Only one application found, selecting that one.")
 	} else {
 		fmt.Println("Select application to import. There won't be any change to the application\n" +
 			"but rosti.state file will be generated for the current working directory and\n" +
 			"you will be able to deploy it as selected app.")
 		fmt.Println("")
-		fmt.Printf("  %6s  App name\n", "ID")
-		fmt.Printf("  %6s  --------\n", "------")
+		cGrey.Printf("  %6s  App name\n", "ID")
+		cGrey.Printf("  %6s  --------\n", "------")
 
 		for _, app := range apps {
-			fmt.Printf("  %6s  %s\n", strconv.Itoa(int(app.ID)), app.Name)
+			fmt.Printf("  %6s  %s\n", cYellow.Sprint(strconv.Itoa(int(app.ID))), cWhite.Sprint(app.Name))
 		}
 		fmt.Println("")
 
-		fmt.Print("Pick one of the IDs: ")
+		cWhite.Println("Pick one of the IDs")
+		cGreen.Print("> ")
 
 		var appIDRaw string
 		_, err := fmt.Scanln(&appIDRaw)
@@ -314,7 +315,7 @@ func selectPlan(client *rostiapi.Client, rostifile *parser.Rostifile) (uint, err
 		rostifile.Plan = "start+"
 	}
 
-	fmt.Println(".. loading list of available plans")
+	cYellow.Println(".. loading list of available plans")
 	plans, err := client.GetPlans()
 	if err != nil {
 		return 0, err
@@ -332,7 +333,7 @@ func selectPlan(client *rostiapi.Client, rostifile *parser.Rostifile) (uint, err
 
 // Selects runtime image based on rostifile
 func selectRuntime(client *rostiapi.Client, rostifile *parser.Rostifile) (string, error) {
-	fmt.Println(".. loading list of available runtimes")
+	cYellow.Println(".. loading list of available runtimes")
 	runtimes, err := client.GetRuntimes()
 	if err != nil {
 		return "", err
@@ -369,8 +370,8 @@ func selectRuntime(client *rostiapi.Client, rostifile *parser.Rostifile) (string
 	return selectedRuntime, nil
 }
 
-func printAppStatus(domains []string, status rostiapi.AppStatus, app rostiapi.App) {
-	fmt.Println("The application is available on these domains:")
+func printAppStatus(domains []string, status rostiapi.AppStatus, app rostiapi.App, showTechs bool) {
+	cYellow.Println("The application is available on these domains:")
 	fmt.Println("")
 	for _, domain := range domains {
 		fmt.Println("   * http://" + domain)
@@ -378,7 +379,7 @@ func printAppStatus(domains []string, status rostiapi.AppStatus, app rostiapi.Ap
 	if len(app.SSHAccess) > 0 {
 		fmt.Println("")
 		fmt.Println("")
-		fmt.Println("SSH access:")
+		cYellow.Println("SSH access:")
 		fmt.Println("")
 		fmt.Printf("  SSH command: ssh -p %d %s@%s\n", app.SSHAccess[0].Port, app.SSHAccess[0].Username, app.SSHAccess[0].Hostname)
 		fmt.Printf("  SSH URI: ssh://%s@%s:%d\n", app.SSHAccess[0].Username, app.SSHAccess[0].Hostname, app.SSHAccess[0].Port)
@@ -386,12 +387,12 @@ func printAppStatus(domains []string, status rostiapi.AppStatus, app rostiapi.Ap
 
 	fmt.Println("")
 	fmt.Println("")
-	fmt.Println("Current status:")
+	cYellow.Println("Current status:")
 	fmt.Println("")
 	if status.Running {
-		fmt.Println("  Container: running")
+		cGreen.Println("  Container: running")
 	} else {
-		fmt.Println("  Container: NOT running")
+		cRed.Println("  Container: NOT running")
 	}
 
 	fmt.Printf("    Memory: %.2f / %.2f MB\n", status.Memory.Usage, status.Memory.Limit)
@@ -402,46 +403,50 @@ func printAppStatus(domains []string, status rostiapi.AppStatus, app rostiapi.Ap
 	}
 
 	if status.DNSStatus {
-		fmt.Println("  DNS: all good")
+		cGreen.Println("  DNS: all good")
 	} else {
-		fmt.Println("  DNS: records are not set properly or they haven't been propagated to the internet yet")
+		cYellow.Println("  DNS: records are not set properly or they haven't been propagated to the internet yet")
 	}
 
 	if status.HTTPStatus {
-		fmt.Println("  HTTP: all good")
+		cGreen.Println("  HTTP: all good")
 	} else {
-		fmt.Println("  HTTP: application doesn't return 200-like status code")
+		cRed.Println("  HTTP: application doesn't return 200-like status code")
 	}
 
 	if len(status.Errors) > 0 {
 		fmt.Println("")
 		fmt.Println("")
-		fmt.Println("Error messages:")
+		cYellow.Println("Error messages:")
 		for _, message := range status.Errors {
-			fmt.Println("  * " + message)
+			cRed.Println("  * " + message)
 		}
 	}
 
 	if len(status.Info) > 0 {
 		fmt.Println("")
 		fmt.Println("")
-		fmt.Println("Info messages:")
+		cYellow.Println("Info messages:")
 		fmt.Println("")
 		for _, message := range status.Info {
 			fmt.Println("  * " + message)
 		}
 	}
 
-	fmt.Println("")
-	fmt.Println("")
-	fmt.Println("Available technologies:")
-	fmt.Println("")
+	if showTechs {
+		fmt.Println("")
+		fmt.Println("")
+		cYellow.Println("Available technologies:")
+		fmt.Println("")
 
-	for _, tech := range status.Techs {
-		fmt.Printf("  %-10s %s\n", tech.Name, tech.Version)
+		for _, tech := range status.Techs {
+			if tech.Name == status.PrimaryTech.Name && tech.Version == status.PrimaryTech.Version {
+				fmt.Printf(cGreen.Sprint("  %-10s %s <--\n"), tech.Name, tech.Version)
+			} else {
+				fmt.Printf("  %-10s %s\n", tech.Name, tech.Version)
+			}
+		}
 	}
 
-	fmt.Println("")
-	fmt.Printf("  Primary technology: %s %s\n", status.PrimaryTech.PrintableName(), status.PrimaryTech.Version)
 	fmt.Println("")
 }
