@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -17,6 +18,7 @@ type Client struct {
 	Server     string
 	Port       int
 	SSHKeyPath string
+	Passphrase []byte
 }
 
 func (c *Client) loadSSHKey() []byte {
@@ -27,11 +29,26 @@ func (c *Client) loadSSHKey() []byte {
 	return content
 }
 
+// IsKeyPasswordProtected return true if password is needed to use the key
+func (c *Client) IsKeyPasswordProtected() bool {
+	_, err := ssh.ParsePrivateKey(c.loadSSHKey())
+	return strings.Contains(err.Error(), "this private key is passphrase protected")
+}
+
 func (c *Client) client() (*ssh.Client, error) {
 	var authMethods []ssh.AuthMethod
 	signer, err := ssh.ParsePrivateKey(c.loadSSHKey())
+
+	// If the key is password protected we ask for the password.
+	if strings.Contains(err.Error(), "this private key is passphrase protected") {
+		signer, err = ssh.ParsePrivateKeyWithPassphrase(c.loadSSHKey(), c.Passphrase)
+		if err != nil {
+			return nil, fmt.Errorf("loading ssh key error: %v", err)
+		}
+	}
+
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loading ssh key error: %v", err)
 	}
 	authMethods = append(authMethods, ssh.PublicKeys(signer))
 

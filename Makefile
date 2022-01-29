@@ -1,4 +1,5 @@
 VERSION=0.5
+TESTIMAGE_VERSION=v1
 
 .PHONY: all
 all: release
@@ -36,3 +37,13 @@ release: bin/rostictl-${VERSION}.linux.arm bin/rostictl-${VERSION}.linux.arm64 b
 .PHONY: clean
 clean: preparation
 	rm bin/*
+
+.PHONY: build-test-image
+build-test-image:
+	cd contrib/testimage && docker build -t rostictl_test:${TESTIMAGE_VERSION} .
+
+test: build-test-image
+	-docker stop rostictl_test &> /dev/null
+	docker run --rm -d -p 3222:22 --name rostictl_test rostictl_test:${TESTIMAGE_VERSION}
+	go test src/ssh/*.go
+	docker stop rostictl_test

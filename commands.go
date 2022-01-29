@@ -214,6 +214,17 @@ func commandUp(c *cli.Context) error {
 		SSHKeyPath: appState.SSHKeyPath,
 	}
 
+	if sshClient.IsKeyPasswordProtected() {
+		passphrase := ""
+		fmt.Print("SSH key password: ")
+		_, err = fmt.Scanln(&passphrase)
+		if err != nil {
+			return fmt.Errorf("ssh key password input error: %v", err)
+		}
+
+		sshClient.Passphrase = []byte("password")
+	}
+
 	// Test SSH connection
 	cYellow.Println(".. waiting for SSH daemon to get ready")
 	testCounter := 0
