@@ -66,7 +66,7 @@ func createArchive(source, target string, exclude []string) error {
 				return err
 			}
 
-			if info.IsDir() {
+			if info.IsDir() || !info.Mode().IsRegular() { // IsRegular is added because without it it fails on Mac
 				return nil
 			}
 

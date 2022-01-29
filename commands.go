@@ -215,7 +215,7 @@ func commandUp(c *cli.Context) error {
 	}
 
 	// Test SSH connection
-	cYellow.Println(".. waiting for SSH daemon to be ready")
+	cYellow.Println(".. waiting for SSH daemon to get ready")
 	testCounter := 0
 	for {
 		_, err := sshClient.Run("echo 1")
@@ -223,7 +223,11 @@ func commandUp(c *cli.Context) error {
 			cGreen.Println("     ready")
 			break
 		}
+
 		if testCounter > 12 {
+			// This prints the last error that occurs. It turned out the problem can actually be
+			// something else because this is the first time we try to connect to the SSH server.
+			cRed.Println(err.Error())
 			return errors.New("SSH daemon has not started in time")
 		}
 

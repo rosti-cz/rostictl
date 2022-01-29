@@ -58,7 +58,7 @@ func (c *Client) client() (*ssh.Client, error) {
 		User:            c.Username,
 		Auth:            authMethods,
 		Config:          sshConfig,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO: this could actually open MinM attack vector
 	}
 
 	// open SSH connection
