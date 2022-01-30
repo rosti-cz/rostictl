@@ -16,6 +16,7 @@ import (
 	"github.com/rosti-cz/cli/src/ssh"
 	"github.com/rosti-cz/cli/src/state"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // Import existing application
@@ -215,14 +216,30 @@ func commandUp(c *cli.Context) error {
 	}
 
 	if sshClient.IsKeyPasswordProtected() {
-		passphrase := ""
-		fmt.Print("SSH key password: ")
-		_, err = fmt.Scanln(&passphrase)
-		if err != nil {
-			return fmt.Errorf("ssh key password input error: %v", err)
-		}
+		counter := 0
+		for {
+			fmt.Print("SSH key password: ")
+			sshClient.Passphrase, err = terminal.ReadPassword(0)
+			fmt.Println()
+			if err != nil {
+				return fmt.Errorf("ssh key password input error: %v", err)
+			}
 
-		sshClient.Passphrase = []byte("password")
+			ok, err := sshClient.IsPasswordOk()
+			if err != nil {
+				return fmt.Errorf("ssh key password check error: %v", err)
+			}
+
+			if ok {
+				break
+			}
+
+			counter += 1
+
+			if counter >= 3 {
+				return fmt.Errorf("too many attempts for the SSH key password")
+			}
+		}
 	}
 
 	// Test SSH connection

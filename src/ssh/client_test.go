@@ -1,7 +1,9 @@
 package ssh
 
 import (
+	"fmt"
 	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -49,10 +51,19 @@ WTdiSeZrE5R9q2ZQC+ZUYY57He0=
 -----END OPENSSH PRIVATE KEY-----
 `
 
-func TestClient(t *testing.T) {
+func TestMain(m *testing.M) {
 	err := ioutil.WriteFile("_testkey", []byte(testKeySecured), 0755)
-	assert.Nil(t, err)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
+	exitVal := m.Run()
+
+	os.Exit(exitVal)
+}
+
+func TestClient(t *testing.T) {
 	client := Client{
 		Username:   "root",
 		Server:     "localhost",
@@ -61,6 +72,38 @@ func TestClient(t *testing.T) {
 		Passphrase: []byte("test"),
 	}
 
-	_, err = client.client()
+	_, err := client.client()
 	assert.Nil(t, err)
+}
+
+func TestClientIsKeyPasswordProtected(t *testing.T) {
+	client := Client{
+		Username:   "root",
+		Server:     "localhost",
+		Port:       3222,
+		SSHKeyPath: "./_testkey",
+		Passphrase: []byte("test"),
+	}
+
+	isit := client.IsKeyPasswordProtected()
+	assert.True(t, isit)
+}
+
+func TestClientIsPasswordOk(t *testing.T) {
+	client := Client{
+		Username:   "root",
+		Server:     "localhost",
+		Port:       3222,
+		SSHKeyPath: "./_testkey",
+		Passphrase: []byte("test"),
+	}
+
+	ok, err := client.IsPasswordOk()
+	assert.Nil(t, err)
+	assert.True(t, ok)
+
+	client.Passphrase = []byte("test222")
+	ok, err = client.IsPasswordOk()
+	assert.Nil(t, err)
+	assert.False(t, ok)
 }

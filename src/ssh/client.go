@@ -35,6 +35,18 @@ func (c *Client) IsKeyPasswordProtected() bool {
 	return strings.Contains(err.Error(), "this private key is passphrase protected")
 }
 
+// IsPasswordOk return true if the passphrase match the passphrase for selected SSH key
+func (c *Client) IsPasswordOk() (bool, error) {
+	_, err := ssh.ParsePrivateKeyWithPassphrase(c.loadSSHKey(), c.Passphrase)
+	if err != nil && strings.Contains(err.Error(), "decryption password incorrect") {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (c *Client) client() (*ssh.Client, error) {
 	var authMethods []ssh.AuthMethod
 	signer, err := ssh.ParsePrivateKey(c.loadSSHKey())
