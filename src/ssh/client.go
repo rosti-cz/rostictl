@@ -32,7 +32,10 @@ func (c *Client) loadSSHKey() []byte {
 // IsKeyPasswordProtected return true if password is needed to use the key
 func (c *Client) IsKeyPasswordProtected() bool {
 	_, err := ssh.ParsePrivateKey(c.loadSSHKey())
-	return strings.Contains(err.Error(), "this private key is passphrase protected")
+	if err != nil {
+		return strings.Contains(err.Error(), "this private key is passphrase protected")
+	}
+	return false
 }
 
 // IsPasswordOk return true if the passphrase match the passphrase for selected SSH key
@@ -52,7 +55,7 @@ func (c *Client) client() (*ssh.Client, error) {
 	signer, err := ssh.ParsePrivateKey(c.loadSSHKey())
 
 	// If the key is password protected we ask for the password.
-	if strings.Contains(err.Error(), "this private key is passphrase protected") {
+	if err != nil && strings.Contains(err.Error(), "this private key is passphrase protected") {
 		signer, err = ssh.ParsePrivateKeyWithPassphrase(c.loadSSHKey(), c.Passphrase)
 		if err != nil {
 			return nil, fmt.Errorf("loading ssh key error: %v", err)

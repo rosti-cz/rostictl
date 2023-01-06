@@ -214,6 +214,7 @@ func (c *Client) DoApp(id uint, action string) error {
 func (c *Client) GetPlans() ([]Plan, error) {
 	plans := []Plan{}
 
+	fmt.Printf("Company ID: %d\n", c.CompanyID)
 	body, statusCode, err := c.call("GET", strconv.Itoa(int(c.CompanyID))+"/"+"plans/", []byte(""))
 	if err != nil {
 		return plans, err

@@ -275,7 +275,7 @@ func commandUp(c *cli.Context) error {
 			if err != nil {
 				cYellow.Print("Command '")
 				cWhite.Print(cmd)
-				cYellow.Println("' error:")
+				cYellow.Println("' return an error:")
 				fmt.Println(buf.String())
 				return err
 			}
@@ -602,8 +602,15 @@ func commandStatus(c *cli.Context) error {
 func commandPlans(c *cli.Context) error {
 	config := config.Load()
 
+	cYellow.Println(".. loading state file")
+	appState, err := state.Load()
+	if err != nil {
+		return err
+	}
+
 	client := rostiapi.Client{
 		Token:      config.Token,
+		CompanyID:  appState.CompanyID,
 		ExtraError: os.Stderr,
 	}
 
@@ -612,10 +619,10 @@ func commandPlans(c *cli.Context) error {
 		return err
 	}
 
-	cGrey.Printf("  %12s  Plan\n", "Slug")
+	cGrey.Printf("\n  %12s  Plan\n", "Slug")
 	cGrey.Printf("  %12s  ------------\n", "------------")
 	for _, plan := range plans {
-		fmt.Printf("  %12s  %s\n", cYellow.Sprint(strings.ToLower(plan.Name)), cGrey.Sprint(plan.Name))
+		fmt.Printf("  %21s  %s\n", cYellow.Sprint(strings.ToLower(plan.Name)), cGrey.Sprint(plan.Name))
 	}
 	fmt.Println("")
 	fmt.Println("Note: Use slug in your Rostifile.")
@@ -636,7 +643,7 @@ func commandCompanies(c *cli.Context) error {
 		return err
 	}
 
-	cGrey.Printf("  %6s  Company name\n", "ID")
+	cGrey.Printf("\n  %6s  Company name\n", "ID")
 	cGrey.Printf("  %6s  ------------\n", "------")
 	for _, company := range companies {
 		fmt.Printf("  %6s  %s\n", cYellow.Sprint(strconv.Itoa(int(company.ID))), cWhite.Sprint(company.Name))
@@ -648,8 +655,15 @@ func commandCompanies(c *cli.Context) error {
 func commandRuntimes(c *cli.Context) error {
 	config := config.Load()
 
+	cYellow.Println(".. loading state file")
+	appState, err := state.Load()
+	if err != nil {
+		return err
+	}
+
 	client := rostiapi.Client{
 		Token:      config.Token,
+		CompanyID:  appState.CompanyID,
 		ExtraError: os.Stderr,
 	}
 
@@ -658,7 +672,7 @@ func commandRuntimes(c *cli.Context) error {
 		return err
 	}
 
-	cGrey.Printf("  Runtime\n")
+	cGrey.Printf("\n  Runtime\n")
 	cGrey.Printf("  ---------------------------\n")
 	for _, runtime := range runtimes {
 		if runtime.Default {

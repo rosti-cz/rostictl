@@ -1,4 +1,4 @@
-VERSION=0.6
+VERSION=0.7
 TESTIMAGE_VERSION=v1
 
 .PHONY: all
@@ -33,6 +33,8 @@ bin/rostictl-${VERSION}.windows.amd64: preparation
 
 .PHONY: release
 release: bin/rostictl-${VERSION}.linux.arm bin/rostictl-${VERSION}.linux.arm64 bin/rostictl-${VERSION}.linux.i386 bin/rostictl-${VERSION}.linux.amd64 bin/rostictl-${VERSION}.darwin.amd64 bin/rostictl-${VERSION}.windows.i386 bin/rostictl-${VERSION}.windows.amd64
+	sha256sum bin/rostictl-* > bin/sha256sums.txt
+	md5sum bin/rostictl-* > bin/md5sums.txt
 	
 .PHONY: clean
 clean: preparation
