@@ -17,6 +17,7 @@ import (
 	"github.com/rosti-cz/cli/src/state"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ssh/terminal"
+	"gopkg.in/yaml.v2"
 )
 
 // Import existing application
@@ -365,18 +366,6 @@ func commandUp(c *cli.Context) error {
 		return err
 	}
 
-	for _, cmd := range rostifile.AfterCommands {
-		fmt.Printf(".. running command: %s\n", cmd)
-		buf, err = sshClient.Run("/bin/sh -c '" + cmd + "'")
-		if err != nil {
-			fmt.Print("Command '")
-			cWhite.Print(cmd)
-			cYellow.Println("' error:")
-			cRed.Println(buf.String())
-			return err
-		}
-	}
-
 	// Setup crontab
 	if len(rostifile.Crontabs) > 0 {
 		cYellow.Println(".. setting up crontabs")
@@ -429,6 +418,18 @@ redirect_stderr=true
 		_, err = sshClient.Run("supervisorctl update")
 		if err != nil {
 			return fmt.Errorf("updating supervisor error: %w", err)
+		}
+	}
+
+	// Setup after commands
+	for _, cmd := range rostifile.AfterCommands {
+		cYellow.Print(".. running command:")
+		fmt.Printf(" %s\n", cmd)
+		buf, err = sshClient.Run("/bin/sh -c '" + cmd + "'")
+		if err != nil {
+			cRed.Println("error: ", err)
+			cRed.Println(buf.String())
+			return err
 		}
 	}
 
@@ -717,5 +718,23 @@ func commandInit(c *cli.Context) error {
 
 func commandVersion(c *cli.Context) error {
 	fmt.Println("Version:", version)
+	return nil
+}
+
+func commandRostifile(c *cli.Context) error {
+	rostifile, err := parser.Parse()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Rostifile:")
+	fmt.Println("----------")
+	body, err := yaml.Marshal(rostifile)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(body))
+
 	return nil
 }

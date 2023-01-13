@@ -1,11 +1,11 @@
-VERSION=0.7
+VERSION=0.8
 TESTIMAGE_VERSION=v1
 
 .PHONY: all
 all: release
 
 .PHONY: preparation
-preparation:
+preparation: clean
 	sed -i "s/const version = \"[0-9\.]*\"/const version = \"${VERSION}\"/" main.go
 	mkdir -p bin
 	go mod tidy
@@ -38,7 +38,7 @@ release: bin/rostictl-${VERSION}.linux.arm bin/rostictl-${VERSION}.linux.arm64 b
 	
 .PHONY: clean
 clean: preparation
-	rm bin/*
+	rm -f bin/*
 
 .PHONY: build-test-image
 build-test-image:
