@@ -29,6 +29,8 @@ type Rostifile struct {
 	SourcePath string `yaml:"source_path,omitempty"`
 	// Plan of the service, possible values are: static,start,start+,normal,normal+,pro,pro+,business,business+. Default is defined in the backend.
 	Plan string `yaml:"plan,omitempty"`
+	// Application port that can be changed only during creation of the application. Default is 8080. No effect for PHP apps.
+	AppPort int `yaml:"app_port,omitempty"`
 	// List of background processes running in supervisor
 	Processes []Process `yaml:"processes,omitempty"`
 	// Crontab jobs
@@ -88,6 +90,7 @@ func (r *Rostifile) Validate() []error {
 		"python",
 		"node",
 		"php",
+		"ruby",
 		"",
 	}
 	var found bool
@@ -98,7 +101,7 @@ func (r *Rostifile) Validate() []error {
 		}
 	}
 	if !found {
-		errs = append(errs, errors.New("only valid technologies are python, node, php and empty string"))
+		errs = append(errs, errors.New("only valid technologies are python, node, php, ruby and empty string"))
 	}
 
 	return errs

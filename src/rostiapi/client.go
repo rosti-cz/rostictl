@@ -125,6 +125,10 @@ func (c *Client) CreateApp(app *App) (*App, error) {
 		log.Println("Returned error:", responseError.Errors)
 		return nil, errors.New(strconv.Itoa(statusCode) + " HTTP status code returned (" + responseError.Message + ")")
 	}
+	if err != nil {
+		log.Println("An error occurred:", err)
+		return nil, err
+	}
 
 	createdApp := App{}
 
@@ -156,6 +160,10 @@ func (c *Client) UpdateApp(app *App) (*App, error) {
 
 		log.Println("Returned error:", responseError.Errors)
 		return nil, errors.New(strconv.Itoa(statusCode) + " HTTP status code returned (" + responseError.Message + ")")
+	}
+	if err != nil {
+		log.Println("An error occurred:", err)
+		return nil, err
 	}
 
 	updatedApp := App{}
@@ -205,6 +213,10 @@ func (c *Client) DoApp(id uint, action string) error {
 		}
 
 		return errors.New(strconv.Itoa(statusCode) + " HTTP status code returned (" + responseError.Message + ")")
+	}
+	if err != nil {
+		log.Println("An error occurred:", err)
+		return err
 	}
 
 	return nil

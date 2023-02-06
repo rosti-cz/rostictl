@@ -169,6 +169,7 @@ func commandUp(c *cli.Context) error {
 			Mode:    mode,
 			Plan:    planID,
 			SSHKeys: []string{sshPubKey},
+			AppPort: rostifile.AppPort,
 		}
 
 		// TODO: save assigned domains into Rostifile
@@ -193,6 +194,7 @@ func commandUp(c *cli.Context) error {
 			Mode:    mode,
 			Plan:    planID,
 			SSHKeys: []string{sshPubKey},
+			AppPort: rostifile.AppPort,
 		}
 
 		newApp, err = client.CreateApp(&app)
@@ -344,6 +346,7 @@ func commandUp(c *cli.Context) error {
 		return err
 	}
 
+	// Before commands
 	for _, cmd := range rostifile.BeforeCommands {
 		cYellow.Print(".. running command:")
 		cWhite.Println(cmd)
@@ -357,11 +360,12 @@ func commandUp(c *cli.Context) error {
 		}
 	}
 
-	cYellow.Println(".. unarchiving code in the container")
+	// Finishing deploying files
+	cYellow.Println(".. un-archiving code in the container")
 	cmd := "/bin/sh -c \"mkdir -p /srv/app && mv _archive.tar /srv/app/ && cd /srv/app && tar xf _archive.tar && rm _archive.tar\""
 	buf, err = sshClient.Run(cmd)
 	if err != nil {
-		cRed.Println("Unarchiving error. Command output:")
+		cRed.Println("Un-archiving error. Command output:")
 		cRed.Println(buf.String())
 		return err
 	}
@@ -706,6 +710,7 @@ func commandInit(c *cli.Context) error {
 	rostifile.AfterCommands = bits.AfterCommands
 	rostifile.BeforeCommands = bits.BeforeCommands
 	rostifile.Processes = bits.Processes
+	rostifile.AppPort = bits.AppPort
 	rostifile.Technology = bits.Technology
 
 	err = parser.Write(rostifile)

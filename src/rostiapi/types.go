@@ -11,18 +11,19 @@ type SSHAccess struct {
 
 // App is structure keeping backend data about an application
 type App struct {
-	ID           uint        `json:"id,omitmepty"`
-	Date         string      `json:"date,omitmepty"`
+	ID           uint        `json:"id,omitempty"`
+	Date         string      `json:"date,omitempty"`
 	Name         string      `json:"name"`
-	Enabled      bool        `json:"enabled,omitmepty"`
-	Image        string      `json:"image,omitmepty"`
-	Domains      []string    `json:"domains,omitmepty"`
-	Mode         string      `json:"mode,omitmepty"`
-	Plan         uint        `json:"plan,omitmepty"`
-	SSHAccess    []SSHAccess `json:"ssh_access,omitmepty"`
-	SSHKeys      []string    `json:"ssh_keys,omitempty,omitmepty"`
-	SMTPUsername string      `json:"smtp_username,omitmepty"`
-	SMTPToken    string      `json:"smtp_token,omitmepty"`
+	Enabled      bool        `json:"enabled,omitempty"`
+	Image        string      `json:"image,omitempty"`
+	Domains      []string    `json:"domains,omitempty"`
+	Mode         string      `json:"mode,omitempty"`
+	Plan         uint        `json:"plan,omitempty"`
+	SSHAccess    []SSHAccess `json:"ssh_access,omitempty"`
+	SSHKeys      []string    `json:"ssh_keys,omitempty"`
+	SMTPUsername string      `json:"smtp_username,omitempty"`
+	SMTPToken    string      `json:"smtp_token,omitempty"`
+	AppPort      int         `json:"app_port,omitempty"`
 }
 
 // ErrorResponse represents message returned by the API in case of non-200 response

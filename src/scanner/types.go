@@ -7,6 +7,7 @@ import "github.com/rosti-cz/cli/src/parser"
 type RostifileBits struct {
 	Technology     string
 	Processes      []parser.Process
+	AppPort        int
 	BeforeCommands []string
 	AfterCommands  []string
 }

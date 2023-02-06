@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strconv"
 
 	"github.com/rosti-cz/cli/src/parser"
 )
@@ -66,6 +67,7 @@ func Scan(directory string) (RostifileBits, error) {
 func python(directory string) (RostifileBits, error) {
 	bits := RostifileBits{
 		Technology: "python",
+		AppPort:    8080,
 	}
 
 	var wsgiModule string
@@ -88,15 +90,27 @@ func python(directory string) (RostifileBits, error) {
 		return bits, errors.New("no WSGI module given")
 	}
 
+	// Let the user to choose port
+	var appPort string
+	var err error
+	fmt.Print("The port where your application is listening on [8080]: ")
+	fmt.Scanln(&appPort)
+	if len(appPort) > 0 {
+		bits.AppPort, err = strconv.Atoi(appPort)
+		if err != nil {
+			return bits, fmt.Errorf("invalid port number: %s", appPort)
+		}
+	}
+
 	bits.Processes = []parser.Process{
-		parser.Process{
+		{
 			Name:    "app",
 			Command: "/srv/venv/bin/gunicorn -u app -g app -b 0.0.0.0:8080 --access-logfile - --error-logfile - --reload " + wsgiModule,
 		},
 	}
 
-	_, err := os.Stat(path.Join(directory, "index.php"))
-	if os.IsNotExist(err) {
+	_, err = os.Stat(path.Join(directory, "requirements.txt"))
+	if !os.IsNotExist(err) {
 		fmt.Println(".. file requirements.txt found, dependency installation added to before_commands.")
 		bits.AfterCommands = append(
 			bits.AfterCommands,
@@ -123,7 +137,7 @@ func php(directory string) (RostifileBits, error) {
 	}
 
 	bits.Processes = []parser.Process{
-		parser.Process{
+		{
 			Name:    "app",
 			Command: "/srv/bin/primary_tech/php-fpm -F -O -g /srv/run/php-fpm.pid -y /srv/conf/php-fpm/php-fpm.conf",
 		},
@@ -135,10 +149,23 @@ func php(directory string) (RostifileBits, error) {
 func node(directory string) (RostifileBits, error) {
 	bits := RostifileBits{
 		Technology: "node",
+		AppPort:    3000,
+	}
+
+	// Let the user to choose port
+	var appPort string
+	var err error
+	fmt.Print("The port where your application is listening on [3000]: ")
+	fmt.Scanln(&appPort)
+	if len(appPort) > 0 {
+		bits.AppPort, err = strconv.Atoi(appPort)
+		if err != nil {
+			return bits, fmt.Errorf("invalid port number: %s", appPort)
+		}
 	}
 
 	// Test existence of package.json
-	_, err := os.Stat(path.Join(directory, "package.json"))
+	_, err = os.Stat(path.Join(directory, "package.json"))
 	if os.IsNotExist(err) {
 		return bits, errors.New("package.json has not been found in your project, please create one and don't forget to add start command")
 	}
@@ -157,7 +184,7 @@ func node(directory string) (RostifileBits, error) {
 	}
 
 	bits.Processes = []parser.Process{
-		parser.Process{
+		{
 			Name:    "app",
 			Command: "/srv/bin/primary_tech/npm start",
 		},
@@ -193,7 +220,7 @@ func binary(directory string) (RostifileBits, error) {
 	}
 
 	bits.Processes = []parser.Process{
-		parser.Process{
+		{
 			Name:    "app",
 			Command: path.Join("/srv/app", binaryFile),
 		},
